@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>antenna.ico</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file>go-next.svg</file>
+        <file>go-previous.svg</file>
+    </qresource>
+</RCC>
