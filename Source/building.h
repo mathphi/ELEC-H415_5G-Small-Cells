@@ -10,9 +10,13 @@
 class Building : public SimulationItem
 {
 public:
-    Building(QRectF rect);
+    Building(QSizeF size);
+    Building(QPointF pos, QSizeF size);
     ~Building();
 
+    Building *clone();
+
+    QSizeF getSize() const;
     QRectF getRect() const;
 
     QRectF boundingRect() const override;
@@ -20,6 +24,8 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) override;
 
 private:
+    QRectF getRelativeRect() const;
+
     QSizeF m_build_size;
 };
 

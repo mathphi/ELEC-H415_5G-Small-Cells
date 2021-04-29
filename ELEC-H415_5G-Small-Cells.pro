@@ -11,6 +11,7 @@ CONFIG += c++14
 SOURCES += \
     Source/antennas.cpp \
     Source/building.cpp \
+    Source/buildingdialog.cpp \
     Source/constants.cpp \
     Source/datalegenditem.cpp \
     Source/emitter.cpp \
@@ -29,6 +30,7 @@ SOURCES += \
 HEADERS += \
     Source/antennas.h \
     Source/building.h \
+    Source/buildingdialog.h \
     Source/constants.h \
     Source/datalegenditem.h \
     Source/emitter.h \
@@ -44,6 +46,7 @@ HEADERS += \
     Source/simulationscene.h
 
 FORMS += \
+    Source/buildingdialog.ui \
     Source/emitterdialog.ui \
     Source/mainwindow.ui \
     Source/receiverdialog.ui
