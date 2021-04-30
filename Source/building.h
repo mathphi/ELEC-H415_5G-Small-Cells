@@ -11,7 +11,7 @@ class Building : public SimulationItem
 {
 public:
     Building(QSizeF size);
-    Building(QPointF pos, QSizeF size);
+    Building(QRectF rect);
     ~Building();
 
     Building *clone();

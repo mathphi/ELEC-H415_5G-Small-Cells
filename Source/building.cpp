@@ -6,14 +6,14 @@
 #include <QPainter>
 
 
-Building::Building(QPointF pos, QSizeF size) : SimulationItem() {
-    m_build_size = size;
-    setPos(pos);
+Building::Building(QRectF rect) : SimulationItem() {
+    m_build_size = rect.size();
+    setPos(rect.topLeft());
 
     setTransformOriginPoint(m_build_size.width()/2, m_build_size.height()/2);
 }
 
-Building::Building(QSizeF size) : Building(QPoint(0,0), size)
+Building::Building(QSizeF size) : Building(QRectF(QPoint(0,0), size))
 {
     // Create a building at position (0,0)
 }
@@ -50,30 +50,19 @@ QSizeF Building::getSize() const {
  */
 QRectF Building::getRect() const {
     return QRectF(
-        pos() - QPointF(m_build_size.width()/2, m_build_size.height()/2),
+        pos(),
         m_build_size
     );
 }
 
-/**
- * @brief Building::getRelativeRect
- * @return
- *
- * This function returns the building rectangle relative to the building
- * position (center of the building).
- */
-QRectF Building::getRelativeRect() const {
-    return QRectF(QPointF(-m_build_size.width()/2, -m_build_size.height()/2), m_build_size);
-}
-
 QRectF Building::boundingRect() const {
     // Bounding rect contains the building rect
-    return getRelativeRect();
+    return QRectF(QPoint(0,0), m_build_size);
 }
 
 QPainterPath Building::shape() const {
     QPainterPath path;
-    path.addRect(getRelativeRect());
+    path.addRect(QRectF(QPoint(0,0), m_build_size));
 
     // Take care of the width of the pen
     QPainterPathStroker ps;
@@ -88,24 +77,22 @@ void Building::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidge
     // Draw the shape of the gain in blue
     painter->setPen(QPen(QBrush(Qt::black), 1));
     painter->setBrush(Qt::gray);
-    painter->drawRect(getRelativeRect());
+    painter->drawRect(QRectF(QPoint(0,0), m_build_size));
 }
 
 
 QDataStream &operator>>(QDataStream &in, Building *&b) {
-    QPointF pos;
-    QSizeF size;
-    in >> pos;
-    in >> size;
+    QRectF rect;
 
-    b = new Building(pos, size);
+    in >> rect;
+
+    b = new Building(rect);
 
     return in;
 }
 
 QDataStream &operator<<(QDataStream &out, Building *b) {
-    out << b->pos();
-    out << b->getSize();
+    out << b->getRect();
 
     return out;
 }

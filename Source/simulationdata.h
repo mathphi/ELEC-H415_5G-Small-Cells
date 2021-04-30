@@ -6,6 +6,7 @@
 #include "building.h"
 #include "emitter.h"
 #include "receiver.h"
+#include "walls.h"
 
 
 namespace SimType {
@@ -39,6 +40,8 @@ public:
     void detachReceiver(Receiver *r);
 
     void reset();
+
+    QList<Wall*> getBuildingWallsList();
 
     QList<Building*> getBuildingsList();
     QList<Emitter*> getEmittersList();

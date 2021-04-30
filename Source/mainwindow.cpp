@@ -774,9 +774,21 @@ void MainWindow::graphicsSceneMouseMoved(QGraphicsSceneMouseEvent *event) {
 
     switch (m_draw_action) {
     ////////////////////// BUILDING/EMITTER/RECEIVER ACTION ///////////////////////
-    case DrawActions::Building:
+    case DrawActions::Building: {
+        Building *b = dynamic_cast<Building*>(m_drawing_item);
+        qreal scale = m_scene->simulationScale();
+
+        QPoint centered_pos = pos - QPoint(b->getSize().width()/2, b->getSize().height()/2);
+
+        m_drawing_item->setPos(QPoint(centered_pos / scale) * scale);
+
+        if (!m_drawing_item->isVisible()) {
+            m_drawing_item->setVisible(true);
+        }
+        break;
+    }
     case DrawActions::Emitter:
-    case DrawActions::Receiver:{
+    case DrawActions::Receiver: {
         m_drawing_item->setPos(pos);
 
         if (!m_drawing_item->isVisible()) {
@@ -972,3 +984,11 @@ void MainWindow::actionZoomBest() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+void MainWindow::switchSimulationMode() {
+    QPen pen(QBrush(Qt::red), 4);
+    foreach (Wall *w, m_simulation_handler->simulationData()->getBuildingWallsList()) {
+        m_scene->addLine(w->getLine(), pen);
+    }
+}

@@ -25,7 +25,8 @@ SOURCES += \
     Source/simulationdata.cpp \
     Source/simulationhandler.cpp \
     Source/simulationitem.cpp \
-    Source/simulationscene.cpp
+    Source/simulationscene.cpp \
+    Source/walls.cpp
 
 HEADERS += \
     Source/antennas.h \
@@ -43,7 +44,8 @@ HEADERS += \
     Source/simulationdata.h \
     Source/simulationhandler.h \
     Source/simulationitem.h \
-    Source/simulationscene.h
+    Source/simulationscene.h \
+    Source/walls.h
 
 FORMS += \
     Source/buildingdialog.ui \
