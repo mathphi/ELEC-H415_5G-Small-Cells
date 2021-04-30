@@ -196,11 +196,11 @@ vector<complex> Emitter::getPolarization() const{
  */
 void Emitter::updateTooltip() {
     // Setup the tooltip with all emitter's info
-    QString tip("<b><u>Émetteur</u></b><br/>"
+    QString tip("<b><u>Emitter</u></b><br/>"
                 "<b><i>%1</i></b><br/>"
-                "<b>Fréquence:</b> %2 GHz<br/>"
-                "<b>Puissance:</b> %3 dBm<br/>"
-                "<b>Rendement:</b> %4%");
+                "<b>Frequency:</b> %2 GHz<br/>"
+                "<b>Power:</b> %3 dBm<br/>"
+                "<b>Efficiency:</b> %4%");
 
     tip = tip.arg(getAntenna()->getAntennaName())
             .arg(getFrequency() * 1e-9, 0, 'f', 2)

@@ -38,7 +38,7 @@ Receiver::Receiver(Antenna *antenna) : SimulationItem()
 Receiver::Receiver(AntennaType::AntennaType antenna_type, double efficiency)
     : Receiver(Antenna::createAntenna(antenna_type, efficiency))
 {
-    //TODO: show a default tooltip + a label or polygain to recognize to antenna ?
+    //TODO: show a default tooltip + a label or polygain to recognize the antenna ?
 }
 
 Receiver::~Receiver()
@@ -318,7 +318,7 @@ void Receiver::showResults(ResultType::ResultType type, int min, int max) {
 
 void Receiver::generateIdleTooltip() {
     // Set the tooltip of the receiver
-    setToolTip(QString("<b><u>Récepteur</u></b><br/>"
+    setToolTip(QString("<b><u>Receiver</u></b><br/>"
                        "<b><i>%1</i></b>")
                .arg(m_antenna->getAntennaName()));
 }
@@ -328,11 +328,11 @@ void Receiver::generateResultsTooltip() {
     //  - the number of incident rays
     //  - the received power
     //  - the bitrate
-    setToolTip(QString("<b><u>Récepteur</u></b><br/>"
+    setToolTip(QString("<b><u>Receiver</u></b><br/>"
                        "<b><i>%1</i></b><br/>"
-                       "<b>Rayons incidents&nbsp;:</b> %2<br>"
-                       "<b>Puissance&nbsp;:</b> %3&nbsp;dBm<br>"
-                       "<b>Débit&nbsp;:</b> %4&nbsp;Mb/s")
+                       "<b>Incident rays&nbsp;:</b> %2<br>"
+                       "<b>Power&nbsp;:</b> %3&nbsp;dBm<br>"
+                       "<b>Bitrate&nbsp;:</b> %4&nbsp;Mb/s")
                .arg(m_antenna->getAntennaName())
                .arg(getRayPaths().size())
                .arg(SimulationData::convertPowerTodBm(receivedPower()), 0, 'f', 2)

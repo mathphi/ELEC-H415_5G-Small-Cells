@@ -96,7 +96,7 @@ AntennaType::AntennaType HalfWaveDipoleVert::getAntennaType() const {
 }
 
 QString HalfWaveDipoleVert::getAntennaName() const {
-    return "Dipôle λ/2 Vertical";
+    return "Vertical Half-Wave Dipole";
 }
 
 QString HalfWaveDipoleVert::getAntennaLabel() const {
@@ -200,7 +200,7 @@ AntennaType::AntennaType HalfWaveDipoleHoriz::getAntennaType() const {
 }
 
 QString HalfWaveDipoleHoriz::getAntennaName() const {
-    return "Dipôle λ/2 Horizontal";
+    return "Horizontal Half-Wave Dipole";
 }
 
 QString HalfWaveDipoleHoriz::getAntennaLabel() const {

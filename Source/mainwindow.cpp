@@ -67,7 +67,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Hide the antenna type combobox by default
     ui->group_antenna_type->hide();
 
-    /* TODO: must be implemented
     // Add items to the antenna type combobox
     for (AntennaType::AntennaType type : AntennaType::AntennaTypeList) {
         // Get an antenna's instance of this type
@@ -79,7 +78,6 @@ MainWindow::MainWindow(QWidget *parent)
         // We don't need the antenna's instance anymore
         delete ant;
     }
-    */
 
     // Window File menu actions
     connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(close()));
@@ -108,6 +106,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->button_eraseAll,        SIGNAL(clicked()),      this, SLOT(eraseAll()));
     connect(ui->button_simulation,      SIGNAL(clicked()),      this, SLOT(switchSimulationMode()));
 
+
+    /*TODO: implement this
     // Simulation buttons group
     connect(ui->button_simControl, SIGNAL(clicked()),         this, SLOT(simulationControlAction()));
     connect(ui->button_simReset,   SIGNAL(clicked()),         this, SLOT(simulationResetAction()));
@@ -116,7 +116,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->checkbox_rays,     SIGNAL(toggled(bool)),     this, SLOT(raysCheckboxToggled(bool)));
     connect(ui->slider_threshold,  SIGNAL(valueChanged(int)), this, SLOT(raysThresholdChanged(int)));
 
-    /*TODO: implement this
     connect(ui->combobox_simType,  SIGNAL(currentIndexChanged(int)),
             this, SLOT(simulationTypeChanged()));
     connect(ui->combobox_antennas_type, SIGNAL(currentIndexChanged(int)),
