@@ -18,7 +18,7 @@ class SimulationScene : public QGraphicsScene
 public:
     SimulationScene(QObject* parent = nullptr);
 
-    qreal simulationScale() const;
+    static qreal simulationScale();
 
     QRectF simulationBoundingRect();
 

@@ -87,6 +87,7 @@ private slots:
     void configureEmitter(Emitter *em);
     void configureReceiver(Receiver *re);
 
+    void switchSimulationMode();
 
 private:
     QPoint moveAligned(QPoint start, QPoint actual);

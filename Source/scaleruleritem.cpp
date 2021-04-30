@@ -28,7 +28,7 @@ QRectF ScaleRulerItem::boundingRect() const {
 
 QPainterPath ScaleRulerItem::shape() const {
     QPainterPath path;
-    path.addRect(-LEGEND_WIDTH-10, -LEGEND_HEIGHT-10, 10, 10);
+    path.addRect(-LEGEND_WIDTH-10, -LEGEND_HEIGHT-10, LEGEND_WIDTH, LEGEND_HEIGHT);
     return path;
 }
 
@@ -66,8 +66,14 @@ void ScaleRulerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, 
         if (measure < 1) {
             measure += 0.20;
         }
-        else {
+        else if (measure < 10) {
             measure += 1;
+        }
+        else if (measure < 100) {
+            measure += 10;
+        }
+        else {
+            measure += 100;
         }
 
         bar_width = measure * sim_scale * m_view_scale;

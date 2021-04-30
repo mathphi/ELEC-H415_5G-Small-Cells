@@ -127,6 +127,40 @@ void SimulationData::reset() {
     m_receiver_list.clear();
 }
 
+QList<Wall*> SimulationData::getBuildingWallsList() {
+    QPainterPath buildings_path;
+
+    // Unite all building rectangles into one path
+    foreach (Building *b, m_building_list) {
+        QPainterPath pth;
+        pth.addRect(b->getRect());
+
+        buildings_path = buildings_path.united(pth);
+    }
+
+    // Simplify the path
+    buildings_path = buildings_path.simplified();
+
+    // Get the independent polygons
+    QList<QPolygonF> poly_list = buildings_path.toSubpathPolygons();
+
+    // Divide all the polygons in walls
+    QList<Wall*> wall_list;
+
+    foreach(QPolygonF p, poly_list) {
+        QList<QPointF> poly_points = p.toList();
+
+        // Loop from 0 to Size - 2 since the last point is the same as the first one (closed path)
+        for (int i = 0 ; i < poly_points.size() - 1 ; i++) {
+            QLineF line(poly_points[i], poly_points[i+1]);
+            Wall *w = new Wall(line);
+            wall_list.append(w);
+        }
+    }
+
+    return wall_list;
+}
+
 QList<Building*> SimulationData::getBuildingsList() {
     return m_building_list;
 }

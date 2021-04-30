@@ -6,6 +6,7 @@
 #include "building.h"
 #include "emitterdialog.h"
 #include "receiverdialog.h"
+#include "buildingdialog.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -308,20 +309,6 @@ void MainWindow::bestView() {
     updateSceneRect();
 }
 
-
-/**
- * @brief MainWindow::addBuilding
- * Slot called when the button "Add a building" is clicked
- */
-void MainWindow::addBuilding() {
-    cancelCurrentDrawing();
-
-    //TODO: dialog to configure the building's size
-
-    m_draw_action = DrawActions::Building;
-    m_drawing_item = nullptr;
-}
-
 void MainWindow::toggleEraseMode(bool state) {
     // Set both button and menu's action state
     ui->button_eraseObject->setChecked(state);
@@ -357,6 +344,33 @@ void MainWindow::eraseAll() {
     if (answer == QMessageBox::Yes) {
         clearAllItems();
     }
+}
+
+
+/**
+ * @brief MainWindow::addBuilding
+ * Slot called when the button "Add a building" is clicked
+ */
+void MainWindow::addBuilding() {
+    cancelCurrentDrawing();
+
+    BuildingDialog building_dialog(this);
+    int ans = building_dialog.exec();
+
+    if (ans == QDialog::Rejected)
+        return;
+
+    QSize building_size = building_dialog.getBuildingSize();
+
+    // Create an building of the configured size
+    m_drawing_item = new Building(building_size * m_scene->simulationScale());
+
+    // We are placing a building
+    m_draw_action = DrawActions::Building;
+
+    // Hide the item until the mouse come on the scene
+    m_drawing_item->setVisible(false);
+    m_scene->addItem(m_drawing_item);
 }
 
 void MainWindow::configureEmitter(Emitter *em) {
@@ -622,7 +636,23 @@ void MainWindow::graphicsSceneLeftReleased(QGraphicsSceneMouseEvent *event) {
         switch (m_draw_action) {
         //////////////////////////////// BUILDING ACTION ////////////////////////////////
         case DrawActions::Building: {
-            //TODO: implement this
+            Building *building = (Building*) m_drawing_item;
+
+            // Add this building to the simulation data
+            m_simulation_handler->simulationData()->attachBuilding(building);
+
+            // Repeat the last action if the control or shift key was pressed
+            if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) {
+                // Clone the last placed receiver and place it
+                m_drawing_item = building->clone();
+                m_drawing_item->setVisible(false);
+                m_scene->addItem(m_drawing_item);
+            }
+            else {
+                // Detach the placed building from the mouse
+                m_drawing_item = nullptr;
+                m_draw_action = DrawActions::None;
+            }
             break;
         }
         //////////////////////////////// EMITTER ACTION /////////////////////////////////
@@ -743,9 +773,21 @@ void MainWindow::graphicsSceneMouseMoved(QGraphicsSceneMouseEvent *event) {
 
     switch (m_draw_action) {
     ////////////////////// BUILDING/EMITTER/RECEIVER ACTION ///////////////////////
-    case DrawActions::Building:
+    case DrawActions::Building: {
+        Building *b = dynamic_cast<Building*>(m_drawing_item);
+        qreal scale = m_scene->simulationScale();
+
+        QPoint centered_pos = pos - QPoint(b->getSize().width()/2, b->getSize().height()/2);
+
+        m_drawing_item->setPos(QPoint(centered_pos / scale) * scale);
+
+        if (!m_drawing_item->isVisible()) {
+            m_drawing_item->setVisible(true);
+        }
+        break;
+    }
     case DrawActions::Emitter:
-    case DrawActions::Receiver:{
+    case DrawActions::Receiver: {
         m_drawing_item->setPos(pos);
 
         if (!m_drawing_item->isVisible()) {
@@ -941,3 +983,11 @@ void MainWindow::actionZoomBest() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+void MainWindow::switchSimulationMode() {
+    QPen pen(QBrush(Qt::red), 4);
+    foreach (Wall *w, m_simulation_handler->simulationData()->getBuildingWallsList()) {
+        m_scene->addLine(w->getLine(), pen);
+    }
+}
