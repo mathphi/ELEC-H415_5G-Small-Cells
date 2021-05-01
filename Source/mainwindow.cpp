@@ -23,6 +23,8 @@
 #define ALIGN_THRESHOLD 16
 #define PROXIMITY_SIZE 16
 
+#define BUILDING_GRID_SIZE 5 // meters
+
 // Extension for saved files (Ray-Tracing Small-Cells MAP)
 #define FILE_EXTENSION "rtscmap"
 
@@ -775,11 +777,19 @@ void MainWindow::graphicsSceneMouseMoved(QGraphicsSceneMouseEvent *event) {
     ////////////////////// BUILDING/EMITTER/RECEIVER ACTION ///////////////////////
     case DrawActions::Building: {
         Building *b = dynamic_cast<Building*>(m_drawing_item);
-        qreal scale = m_scene->simulationScale();
 
+        // Scale is 1.0 * SimulationScale if the ALT modifier is pressed
+        qreal b_scale = m_scene->simulationScale();
+
+        // If ALT modifier is not pressed
+        if (!(event->modifiers() & Qt::AltModifier)) {
+            b_scale = m_scene->simulationScale() * BUILDING_GRID_SIZE;
+        }
+
+        // Center the building on the mouse
         QPoint centered_pos = pos - QPoint(b->getSize().width()/2, b->getSize().height()/2);
 
-        m_drawing_item->setPos(QPoint(centered_pos / scale) * scale);
+        m_drawing_item->setPos(QPoint(centered_pos / b_scale) * b_scale);
 
         if (!m_drawing_item->isVisible()) {
             m_drawing_item->setVisible(true);
@@ -788,7 +798,15 @@ void MainWindow::graphicsSceneMouseMoved(QGraphicsSceneMouseEvent *event) {
     }
     case DrawActions::Emitter:
     case DrawActions::Receiver: {
-        m_drawing_item->setPos(pos);
+        // Scale is 1.0 * SimulationScale if the ALT modifier is pressed
+        qreal scale = m_scene->simulationScale();
+
+        // If ALT modifier is not pressed
+        if (!(event->modifiers() & Qt::AltModifier)) {
+            scale = m_scene->simulationScale() * BUILDING_GRID_SIZE;
+        }
+
+        m_drawing_item->setPos(QPoint(pos / scale) * scale);
 
         if (!m_drawing_item->isVisible()) {
             m_drawing_item->setVisible(true);
@@ -986,8 +1004,34 @@ void MainWindow::actionZoomBest() {
 
 
 void MainWindow::switchSimulationMode() {
+    /*
+     * NOTE:
+     * This is a test code...
+     * This has nothing to do with the real action of the corresponding button
+     */
+
+    /*
     QPen pen(QBrush(Qt::red), 4);
     foreach (Wall *w, m_simulation_handler->simulationData()->getBuildingWallsList()) {
         m_scene->addLine(w->getLine(), pen);
+    }
+    */
+
+    // Get the simulation bounding rect
+    QRectF area = m_scene->simulationBoundingRect();
+    AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
+
+    // Create the area rectangle
+    ReceiversArea *sim_area_item = new ReceiversArea();
+    m_scene->addItem((SimulationItem*) sim_area_item);
+
+    // Re-draw the simulation area
+    // Set the area after the item is added to the scene!
+    sim_area_item->setArea(type, area);
+
+    qDebug() << "Coverage receiver count:" << sim_area_item->getReceiversList().size();
+
+    foreach (Receiver *r, sim_area_item->getReceiversList()) {
+        r->showResults(0,100);
     }
 }

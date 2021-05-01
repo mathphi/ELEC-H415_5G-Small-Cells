@@ -8,13 +8,6 @@
 #include "raypath.h"
 #include "antennas.h"
 
-namespace ResultType {
-enum ResultType {
-    Power,
-    Bitrate
-};
-}
-
 class Receiver : public SimulationItem
 {
 public:
@@ -51,9 +44,8 @@ public:
     QList<RayPath*> getRayPaths();
 
     double receivedPower();
-    double getBitRate();
 
-    void showResults(ResultType::ResultType type, int min, int max);
+    void showResults(int min, int max);
 
     void generateIdleTooltip();
     void generateResultsTooltip();
@@ -65,7 +57,6 @@ private:
     QList<RayPath*> m_received_rays;
     double m_received_power;
 
-    ResultType::ResultType m_res_type;
     int m_res_min;
     int m_res_max;
 

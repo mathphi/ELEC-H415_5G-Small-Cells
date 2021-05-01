@@ -6,6 +6,10 @@
 #include <QPainter>
 
 
+// Building border width (px)
+#define BUILDING_BORDER 1.0
+
+
 Building::Building(QRectF rect) : SimulationItem() {
     m_build_size = rect.size();
     setPos(rect.topLeft());
@@ -66,7 +70,7 @@ QPainterPath Building::shape() const {
 
     // Take care of the width of the pen
     QPainterPathStroker ps;
-    ps.setWidth(1.0);
+    ps.setWidth(BUILDING_BORDER);
 
     QPainterPath p = ps.createStroke(path);
     p.addPath(path);
@@ -75,7 +79,7 @@ QPainterPath Building::shape() const {
 
 void Building::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     // Draw the shape of the gain in blue
-    painter->setPen(QPen(QBrush(Qt::black), 1));
+    painter->setPen(QPen(QBrush(Qt::black), BUILDING_BORDER));
     painter->setBrush(Qt::gray);
     painter->drawRect(QRectF(QPoint(0,0), m_build_size));
 }

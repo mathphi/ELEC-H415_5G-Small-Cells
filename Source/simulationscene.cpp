@@ -7,7 +7,7 @@
 #include <QGraphicsView>
 
 
-#define SIMULATION_SCALE 10.0
+#define SIMULATION_SCALE 4.0
 
 SimulationScene::SimulationScene(QObject *parent) : QGraphicsScene (parent)
 {

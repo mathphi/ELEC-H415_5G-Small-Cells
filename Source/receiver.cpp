@@ -5,9 +5,9 @@
 
 #include <QPainter>
 
-// We want a receiver that is a square of 1 meter side
-#define RECEIVER_SIZE (1.0 * simulationScene()->simulationScale())
-#define RECEIVER_CIRCLE_SIZE 8 // Size of the circle at the center (in pixels)
+#define RECEIVER_AREA_SIZE      (1.0 * simulationScene()->simulationScale())
+#define RECEIVER_CROSS_SIZE     (4.0 * simulationScene()->simulationScale())
+#define RECEIVER_CIRCLE_SIZE    6 // Size of the circle at the center (in pixels)
 
 Receiver::Receiver(Antenna *antenna) : SimulationItem()
 {
@@ -24,7 +24,6 @@ Receiver::Receiver(Antenna *antenna) : SimulationItem()
     m_show_result = false;
 
     // Default type and range of the result
-    m_res_type = ResultType::Bitrate;
     m_res_min = 54;
     m_res_max = 433;
 
@@ -176,38 +175,33 @@ double Receiver::receivedPower() {
     return m_received_power;
 }
 
-double Receiver::getBitRate() {
-    double bit_rate = 0;
-    double dbm_power = SimulationData::convertPowerTodBm(m_received_power);
-
-    // Under -82 dBm, the bitrate is 0 Mb/s
-    if (dbm_power >= -82) {
-        // Limit the power to -51 dBm (the bit rate cannot be greater)
-        dbm_power = min(dbm_power, -51.0);
-
-        // Linearisation between the two boundary values :
-        //   -82 dBm        54 Mb/s
-        //   -51 dBm        433 Mb/s
-        bit_rate = (433.0 - 54.0) / (-51.0 + 82.0) * (dbm_power + 51.0) + 433.0;
-    }
-
-    return bit_rate;
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ------------------------------------ GRAPHICS FUNCTIONS ---------------------------------------//
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 QRectF Receiver::boundingRect() const {
-    return QRectF(-RECEIVER_SIZE/2 - 2, -RECEIVER_SIZE/2 - 2,
-                  RECEIVER_SIZE + 4, RECEIVER_SIZE + 4);
+    if (!m_flat) {
+        return QRectF(-RECEIVER_CROSS_SIZE/2 - 1, -RECEIVER_CROSS_SIZE/2 - 1,
+                       RECEIVER_CROSS_SIZE + 2,    RECEIVER_CROSS_SIZE + 2);
+    }
+    else {
+        return QRectF(-RECEIVER_AREA_SIZE/2, -RECEIVER_AREA_SIZE/2,
+                       RECEIVER_AREA_SIZE,    RECEIVER_AREA_SIZE);
+    }
 }
 
 QPainterPath Receiver::shape() const {
     QPainterPath path;
-    path.addRect(-RECEIVER_SIZE/2 - 2, -RECEIVER_SIZE/2 - 2,
-                 RECEIVER_SIZE + 4, RECEIVER_SIZE + 4);
+    if (!m_flat) {
+        path.addRect(-RECEIVER_CROSS_SIZE/2 - 1, -RECEIVER_CROSS_SIZE/2 - 1,
+                      RECEIVER_CROSS_SIZE + 2,    RECEIVER_CROSS_SIZE + 2);
+    }
+    else {
+        path.addRect(-RECEIVER_AREA_SIZE/2, -RECEIVER_AREA_SIZE/2,
+                      RECEIVER_AREA_SIZE,    RECEIVER_AREA_SIZE);
+    }
+
     return path;
 }
 
@@ -232,13 +226,14 @@ void Receiver::setFlat(bool flat) {
 }
 
 void Receiver::paintShaped(QPainter *painter) {
-    // Draw a dash-dot lined square with a cross on his center
+    // Draw a cross on the center of the receiver
     painter->setBrush(Qt::transparent);
-    painter->setPen(QPen(QBrush(Qt::black), 1,Qt::DashDotLine));
-    painter->drawRect(-RECEIVER_SIZE/2, -RECEIVER_SIZE/2, RECEIVER_SIZE, RECEIVER_SIZE);
+    painter->setPen(QPen(QBrush(Qt::black), 2.0, Qt::SolidLine));
 
-    painter->drawLine(0, -RECEIVER_SIZE/2, 0, RECEIVER_SIZE/2);
-    painter->drawLine(-RECEIVER_SIZE/2, 0, RECEIVER_SIZE/2, 0);
+    painter->drawLine(-RECEIVER_CROSS_SIZE/2, -RECEIVER_CROSS_SIZE/2,
+                       RECEIVER_CROSS_SIZE/2,  RECEIVER_CROSS_SIZE/2);
+    painter->drawLine(-RECEIVER_CROSS_SIZE/2,  RECEIVER_CROSS_SIZE/2,
+                       RECEIVER_CROSS_SIZE/2, -RECEIVER_CROSS_SIZE/2);
 
     // Draw a circle on the center of the drawn square
     painter->setPen(QPen(QBrush(Qt::black), 1));
@@ -251,19 +246,12 @@ void Receiver::paintShaped(QPainter *painter) {
 }
 
 void Receiver::paintFlat(QPainter *painter) {
-    double data = 0;
-
     // Nothing to paint
     if (!m_show_result) {
         return;
     }
 
-    if (m_res_type == ResultType::Bitrate) {
-        data = getBitRate();
-    }
-    else {
-        data = SimulationData::convertPowerTodBm(receivedPower());
-    }
+    double data = SimulationData::convertPowerTodBm(receivedPower());
 
     QColor background_color;
 
@@ -279,29 +267,13 @@ void Receiver::paintFlat(QPainter *painter) {
     }
 
     painter->fillRect(
-                -RECEIVER_SIZE/2, -RECEIVER_SIZE/2,
-                RECEIVER_SIZE, RECEIVER_SIZE,
+                -RECEIVER_AREA_SIZE/2, -RECEIVER_AREA_SIZE/2,
+                 RECEIVER_AREA_SIZE,    RECEIVER_AREA_SIZE,
                 background_color);
-
-    QString data_str = QString("%1").arg(data, 0, 'f', 0);
-    const QRect text_rect(-RECEIVER_SIZE/2, -RECEIVER_SIZE/2, RECEIVER_SIZE, RECEIVER_SIZE);
-
-    int light_level = qGray(background_color.rgb());
-
-    // Paint a white or black text (function of the light level of the background)
-    if (light_level > 125) {
-        painter->setPen(Qt::black);
-    }
-    else {
-        painter->setPen(Qt::white);
-    }
-
-    painter->drawText(text_rect, Qt::AlignCenter | Qt::AlignHCenter, data_str);
 }
 
-void Receiver::showResults(ResultType::ResultType type, int min, int max) {
+void Receiver::showResults(int min, int max) {
     // Result type and range
-    m_res_type = type;
     m_res_min = min;
     m_res_max = max;
 
@@ -327,16 +299,13 @@ void Receiver::generateResultsTooltip() {
     // Set the tooltip of the receiver with
     //  - the number of incident rays
     //  - the received power
-    //  - the bitrate
     setToolTip(QString("<b><u>Receiver</u></b><br/>"
                        "<b><i>%1</i></b><br/>"
                        "<b>Incident rays&nbsp;:</b> %2<br>"
-                       "<b>Power&nbsp;:</b> %3&nbsp;dBm<br>"
-                       "<b>Bitrate&nbsp;:</b> %4&nbsp;Mb/s")
+                       "<b>Power&nbsp;:</b> %3&nbsp;dBm")
                .arg(m_antenna->getAntennaName())
                .arg(getRayPaths().size())
-               .arg(SimulationData::convertPowerTodBm(receivedPower()), 0, 'f', 2)
-               .arg(getBitRate(), 0, 'f', 2));
+               .arg(SimulationData::convertPowerTodBm(receivedPower()), 0, 'f', 2));
 }
 
 
@@ -397,7 +366,7 @@ void ReceiversArea::setArea(AntennaType::AntennaType type, QRectF area) {
     deleteReceivers();
     createReceivers(type, fit_area);
 }
-
+#include <QDebug>
 void ReceiversArea::createReceivers(AntennaType::AntennaType type, QRectF area) {
     if (!simulationScene())
         return;
@@ -406,13 +375,28 @@ void ReceiversArea::createReceivers(AntennaType::AntennaType type, QRectF area) 
     QSize num_rcv = (area.size() / simulationScene()->simulationScale()).toSize();
 
     // Get the initial position of the receivers
-    QPointF init_pos = area.topLeft() + QPointF(RECEIVER_SIZE/2, RECEIVER_SIZE/2);
+    QPointF init_pos = area.topLeft() + QPointF(RECEIVER_AREA_SIZE/2, RECEIVER_AREA_SIZE/2);
 
     // Add a receiver to each m² on the area
     for (int x = 0 ; x < num_rcv.width() ; x++) {
         for (int y = 0 ; y < num_rcv.height() ; y++) {
-            QPointF delta_pos(x * RECEIVER_SIZE, y * RECEIVER_SIZE);
+            QPointF delta_pos(x * RECEIVER_AREA_SIZE, y * RECEIVER_AREA_SIZE);
             QPointF rcv_pos = init_pos + delta_pos;
+
+            bool overlap_building = false;
+
+            // Check if this receiver overlaps a building
+            foreach(QGraphicsItem *item, simulationScene()->items(rcv_pos)) {
+                // If the overlapped item is a building -> don't place a receiver
+                if (dynamic_cast<Building*>(item)) {
+                    overlap_building = true;
+                    break;;
+                }
+            }
+
+            // Skip this position if overlapping with building
+            if (overlap_building)
+                continue;
 
             Receiver *rcv = new Receiver(type, 1.0);
             simulationScene()->addItem(rcv);

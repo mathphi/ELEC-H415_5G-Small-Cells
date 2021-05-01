@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>215</width>
-    <height>191</height>
+    <width>184</width>
+    <height>168</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -38,7 +38,7 @@
            <string> m</string>
           </property>
           <property name="minimum">
-           <number>1</number>
+           <number>5</number>
           </property>
           <property name="maximum">
            <number>999</number>
@@ -47,7 +47,7 @@
            <number>5</number>
           </property>
           <property name="value">
-           <number>10</number>
+           <number>50</number>
           </property>
          </widget>
         </item>
@@ -64,7 +64,7 @@
            <string> m</string>
           </property>
           <property name="minimum">
-           <number>1</number>
+           <number>5</number>
           </property>
           <property name="maximum">
            <number>999</number>
@@ -73,7 +73,7 @@
            <number>5</number>
           </property>
           <property name="value">
-           <number>10</number>
+           <number>50</number>
           </property>
          </widget>
         </item>
