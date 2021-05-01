@@ -41,6 +41,7 @@ public:
 
     void reset();
 
+    QList<Wall*> getBuildingWallsFiltered(QRectF boundary_rect);
     QList<Wall*> getBuildingWallsList();
 
     QList<Building*> getBuildingsList();

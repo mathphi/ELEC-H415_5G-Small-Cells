@@ -1010,13 +1010,15 @@ void MainWindow::switchSimulationMode() {
      * This has nothing to do with the real action of the corresponding button
      */
 
-    /*
+
+    QRectF area = m_scene->simulationBoundingRect();
     QPen pen(QBrush(Qt::red), 4);
-    foreach (Wall *w, m_simulation_handler->simulationData()->getBuildingWallsList()) {
+    foreach (Wall *w, m_simulation_handler->simulationData()->getBuildingWallsFiltered(area)) {
         m_scene->addLine(w->getLine(), pen);
     }
-    */
 
+
+    /*
     // Get the simulation bounding rect
     QRectF area = m_scene->simulationBoundingRect();
     AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
@@ -1034,4 +1036,5 @@ void MainWindow::switchSimulationMode() {
     foreach (Receiver *r, sim_area_item->getReceiversList()) {
         r->showResults(0,100);
     }
+    */
 }

@@ -127,6 +127,33 @@ void SimulationData::reset() {
     m_receiver_list.clear();
 }
 
+QList<Wall*> SimulationData::getBuildingWallsFiltered(QRectF boundary_rect) {
+    QLineF left_l(boundary_rect.bottomLeft(), boundary_rect.topLeft());
+    QLineF top_l(boundary_rect.topLeft(), boundary_rect.topRight());
+    QLineF right_l(boundary_rect.topRight(), boundary_rect.bottomRight());
+    QLineF bottom_l(boundary_rect.bottomRight(), boundary_rect.bottomLeft());
+
+    // Filtered walls
+    QList<Wall*> walls_flt;
+
+    // Check which wall is containted in a boundary
+    foreach(Wall *w, getBuildingWallsList()) {
+        QLineF w_line = w->getLine();
+
+        // Check if wall is horizontal/vertical and on the same y/x as the boundaries
+        if (!(w_line.y1() == top_l.y1()    && w_line.y1() == w_line.y2()) &&
+            !(w_line.y1() == bottom_l.y1() && w_line.y1() == w_line.y2()) &&
+            !(w_line.x1() == left_l.x1()   && w_line.x1() == w_line.x2()) &&
+            !(w_line.x1() == right_l.x1()  && w_line.x1() == w_line.x2()))
+        {
+            // Keep the wall if it is not in the boundaries
+            walls_flt.append(w);
+        }
+    }
+
+    return walls_flt;
+}
+
 QList<Wall*> SimulationData::getBuildingWallsList() {
     QPainterPath buildings_path;
 
