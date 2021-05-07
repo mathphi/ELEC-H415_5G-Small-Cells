@@ -1,16 +1,14 @@
 #include "computationunit.h"
 #include "simulationhandler.h"
 
-ComputationUnit::ComputationUnit(SimulationHandler *h, Emitter *e, Receiver *r, Wall *w) :
+ComputationUnit::ComputationUnit(SimulationHandler *h, Receiver *r) :
     QObject(h), QRunnable()
 {
     // Don't delete the computation unit when finished
     setAutoDelete(false);
 
     m_handler = h;
-    m_emitter = e;
     m_receiver = r;
-    m_wall = w;
 
     // Mark this CU as stopped
     m_running = false;
@@ -33,7 +31,7 @@ void ComputationUnit::run() {
     emit computationStarted();
 
     // Compute the reflections recursively
-    m_handler->recursiveReflection(m_emitter, m_receiver, m_wall);
+    m_handler->computeReceiverRays(m_receiver);
 
     // Mark this CU as stopped
     m_running = false;

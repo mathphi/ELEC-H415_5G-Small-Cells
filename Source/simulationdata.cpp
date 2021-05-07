@@ -1,4 +1,5 @@
 #include "simulationdata.h"
+#include "corner.h"
 
 // The max amplitude for the data's color
 #define PEAK_COLOR_LIGHT 255
@@ -197,6 +198,48 @@ QList<Wall*> SimulationData::makeBuildingWallsList() const {
     }
 
     return wall_list;
+}
+
+QList<Corner*> SimulationData::makeWallsCorners(QList<Wall*> walls_list) const {
+    // Initialize the corners list
+    QList<Corner*> corner_list;
+    QLineF l_w1, l_w2;
+
+    // Check the start/end points for each pair of wall
+    for (int i = 0 ; i < walls_list.size() ; i++) {
+        for (int j = i+1 ; j < walls_list.size() ; j++) {
+            Wall *w1 = walls_list.at(i);
+            Wall *w2 = walls_list.at(j);
+
+            // Get the line of each wall
+            l_w1 = w1->getLine();
+            l_w2 = w2->getLine();
+
+            // Check if one end matches for both walls
+            if (l_w1.p1() == l_w2.p1()) {
+                // In this case, there is a corner at l_w1.p1()
+                Corner *corner = new Corner(l_w1.p1(), l_w1.p2(), l_w2.p2(), w1, w2);
+                corner_list.append(corner);
+            }
+            else if (l_w1.p1() == l_w2.p2()) {
+                // In this case, there is a corner at l_w1.p1()
+                Corner *corner = new Corner(l_w1.p1(), l_w1.p2(), l_w2.p1(), w1, w2);
+                corner_list.append(corner);
+            }
+            else if (l_w1.p2() == l_w2.p1()) {
+                // In this case, there is a corner at l_w1.p2()
+                Corner *corner = new Corner(l_w1.p2(), l_w1.p1(), l_w2.p2(), w1, w2);
+                corner_list.append(corner);
+            }
+            else if (l_w1.p2() == l_w2.p2()) {
+                // In this case, there is a corner at l_w1.p2()
+                Corner *corner = new Corner(l_w1.p2(), l_w1.p1(), l_w2.p1(), w1, w2);
+                corner_list.append(corner);
+            }
+        }
+    }
+
+    return corner_list;
 }
 
 QList<Building*> SimulationData::getBuildingsList() {

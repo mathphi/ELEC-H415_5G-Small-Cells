@@ -44,9 +44,12 @@ public:
             QList<Wall*> walls = QList<Wall*>(),
             int level = 1);
 
-    void computeAllRays();
+    void computeDiffraction(Emitter *e, Receiver *r, Corner *c);
 
-    void recursiveReflectionThreaded(Emitter *e, Receiver *r, Wall *w);
+    void computeAllRays();
+    void computeReceiverRays(Receiver *r);
+
+    void receiverRaysThreaded(Receiver *r);
 
     void startSimulationComputation(QList<Receiver *> rcv_list, QRectF sim_area);
     void stopSimulationComputation();
@@ -65,6 +68,7 @@ private:
     SimulationData *m_simulation_data;
     QList<Receiver*> m_receivers_list;
     QList<Wall*> m_wall_list;
+    QList<Corner*> m_corners_list;
 
     QElapsedTimer m_computation_timer;
 

@@ -1,6 +1,7 @@
 #include "simulationhandler.h"
 #include "computationunit.h"
 #include "constants.h"
+#include "corner.h"
 
 #include <QDebug>
 
@@ -392,6 +393,83 @@ void SimulationHandler::recursiveReflection(
 }
 
 
+/**
+ * @brief SimulationHandler::computeDiffraction
+ * @param e
+ * @param r
+ * @param c
+ *
+ * This function computes the diffracted ray from an emitter to a receiver via the corner c.
+ */
+void SimulationHandler::computeDiffraction(Emitter *e, Receiver *r, Corner *c) {
+    // Create the rays from emitter/receiver to the corner
+    QLineF ce_ray(c->getRealPos(), e->getRealPos());
+    QLineF cr_ray(c->getRealPos(), r->getRealPos());
+
+    // Create measurement lines from adjacent walls ends to the emitter
+    QLineF measur_line1(e->getRealPos(), c->getRealEndPoints().at(0));
+    QLineF measur_line2(e->getRealPos(), c->getRealEndPoints().at(1));
+
+    QLineF em_adj;   // Wall adjacent to the emitter's ray
+    QLineF rv_adj;   // Wall adjacent to the receiver's ray
+
+    // Compare the length of both measurement lines to figure out which wall is
+    // adjacent to the ray coming from the emitter.
+    if (measur_line1.length() < measur_line2.length()) {
+        // Wall 1 is adjacent to the emitter's ray
+        em_adj = c->getAdjecentRealLines()[0];
+        rv_adj = c->getAdjecentRealLines()[1];
+    }
+    else {
+        // Wall 2 is adjacent to the emitter's ray
+        em_adj = c->getAdjecentRealLines()[1];
+        rv_adj = c->getAdjecentRealLines()[0];
+    }
+
+    // Check if both angles of the rays with their adjacent wall is < 90° -> valid diffraction
+    qreal em_angle = fabs(em_adj.angle() - ce_ray.angle());
+    qreal rv_angle = fabs(rv_adj.angle() - cr_ray.angle());
+
+    // Normalize the computed angles to [0,180°]
+    if (em_angle > 180) {
+        em_angle = 360 - em_angle;
+    }
+    if (rv_angle > 180) {
+        rv_angle = 360 - rv_angle;
+    }
+
+    // Check if one of this angle is > 90° -> not a valid diffraction
+    if (em_angle > 90 || rv_angle > 90) {
+        return;
+    }
+
+    // Check if the ray from the emitter/receiver to the corner intersects a wall
+    if (checkIntersections(ce_ray, c->getAdjecentWalls().at(0), c->getAdjecentWalls().at(1)) ||
+        checkIntersections(cr_ray, c->getAdjecentWalls().at(0), c->getAdjecentWalls().at(1)))
+    {
+        // If the diffracted ray intersects a wall -> ignore it
+        return;
+    }
+
+    // Now we have a valid diffraction for this assembly of emitter/receiver/corner.
+    // We can compute the diffraction coefficient using the Kniffe-edge model.
+
+    // Get the LOS line
+    QLineF los_ray(e->getRealPos(), r->getRealPos());
+
+    // Compute diffraction parameters
+    double omega = e->getFrequency()*2*M_PI;
+    double beta = omega*LIGHT_SPEED;
+    double Delta_r = (ce_ray.length() + cr_ray.length()) - los_ray.length();
+
+    // Fresnel parameter (equation 3.57)
+    double nu = sqrt(2/M_PI * beta * Delta_r);
+
+    // Compute the diffraction coefficient F(ν) (equations 3.58, 3.59
+    //TODO
+}
+
+
 /**************************************************************************************************/
 // ---------------------------- SIMULATION MANAGEMENT FUNCTIONS --------------------------------- //
 /**************************************************************************************************/
@@ -406,53 +484,66 @@ void SimulationHandler::computeAllRays() {
     // Start the time counter
     m_computation_timer.start();
 
-    //TODO: thread for receivers
     // Loop over the receivers
-    foreach(Receiver *r, m_receivers_list)
-    {
-        // Loop over the emitters
-        foreach(Emitter *e, simulationData()->getEmittersList())
-        {
-            // Compute the direct ray path
-            RayPath *LOS = computeRayPath(e, r);
-
-            // Add it to his receiver
-            r->addRayPath(LOS);
-
-            // Compute reflections only if LOS (or if NLOS reflection forced by settings)
-            if (LOS != nullptr || simulationData()->reflectionEnabledNLOS())
-            {
-                // For each wall in the scene, compute the reflections recursively
-                foreach(Wall *w, m_wall_list)
-                {
-                    // Don't compute any reflection if not needed
-                    if (simulationData()->maxReflectionsCount() > 0) {
-                        // Compute the ray paths recursively (in a thread)
-                        recursiveReflection(e, r, w);
-                    }
-                }
-            }
-
-            //TODO: diffraction
-        }
+    foreach(Receiver *r, m_receivers_list) {
+        // Create a threaded computation unit to compute the rays to this receiver
+        receiverRaysThreaded(r);
     }
 
     // Call it once (in the case we don't have any computation unit created)
-    //computationUnitFinished();
+    computationUnitFinished();
 }
 
 /**
- * @brief SimulationHandler::recursiveReflectionThreaded
- * @param e
+ * @brief SimulationHandler::computeReceiverRays
  * @param r
- * @param w
  *
- * This function creates a computation unit to compute the reflections
- * recursively in a thread.
+ * This function computes all the rays arriving at the receiver r
  */
-void SimulationHandler::recursiveReflectionThreaded(Emitter *e, Receiver *r, Wall *w) {
+void SimulationHandler::computeReceiverRays(Receiver *r) {
+    // Loop over the emitters
+    foreach(Emitter *e, simulationData()->getEmittersList())
+    {
+        // Compute the direct ray path
+        RayPath *LOS = computeRayPath(e, r);
+
+        // Add it to his receiver
+        r->addRayPath(LOS);
+
+        // Compute reflections only if LOS (or if NLOS reflection forced by settings)
+        if (LOS != nullptr || simulationData()->reflectionEnabledNLOS())
+        {
+            // For each wall in the scene, compute the reflections recursively
+            foreach(Wall *w, m_wall_list)
+            {
+                // Don't compute any reflection if not needed
+                if (simulationData()->maxReflectionsCount() > 0) {
+                    // Compute the ray paths recursively (in a thread)
+                    recursiveReflection(e, r, w);
+                }
+            }
+        }
+
+        // Compute diffraction only if no LOS
+        if (LOS == nullptr) {
+            // For each corner of the scene
+            foreach(Corner *c, m_corners_list) {
+                computeDiffraction(e, r, c);
+            }
+        }
+    }
+}
+
+/**
+ * @brief SimulationHandler::receiverRaysThreaded
+ * @param r
+ *
+ * This function creates a computation unit to compute the rays
+ * to the receiver r in a thread.
+ */
+void SimulationHandler::receiverRaysThreaded(Receiver *r) {
     // Create a computation unit for the recursive computation of the reflections
-    ComputationUnit *cu = new ComputationUnit(this, e, r, w);
+    ComputationUnit *cu = new ComputationUnit(this, r);
 
     // Add this CU to the list
     m_computation_units.append(cu);
@@ -540,6 +631,9 @@ void SimulationHandler::startSimulationComputation(QList<Receiver*> rcv_list, QR
     // Create the walls list from the buildings list
     m_wall_list = simulationData()->makeBuildingWallsFiltered(m_sim_area);
 
+    // Create the corners list from the walls list
+    m_corners_list = simulationData()->makeWallsCorners(m_wall_list);
+
     // Mark the simulation as running
     m_sim_started = true;
 
@@ -554,9 +648,6 @@ void SimulationHandler::startSimulationComputation(QList<Receiver*> rcv_list, QR
 
     // Compute all rays
     computeAllRays();
-
-    qDebug() << "done";
-    emit simulationFinished();
 }
 
 /**
@@ -605,4 +696,12 @@ void SimulationHandler::resetComputedData() {
 
     // Clear the walls list
     m_wall_list.clear();
+
+    // Delete all corners (created from walls list)
+    foreach(Corner *c, m_corners_list) {
+        delete c;
+    }
+
+    // Clear the corners list
+    m_corners_list.clear();
 }

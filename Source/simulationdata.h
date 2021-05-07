@@ -8,6 +8,7 @@
 #include "receiver.h"
 #include "walls.h"
 
+class Corner;
 
 namespace SimType {
 enum SimType {
@@ -43,6 +44,8 @@ public:
 
     QList<Wall*> makeBuildingWallsFiltered(const QRectF boundary_rect) const;
     QList<Wall*> makeBuildingWallsList() const;
+
+    QList<Corner*> makeWallsCorners(QList<Wall*> walls_list) const;
 
     QList<Building*> getBuildingsList();
     QList<Emitter*> getEmittersList();

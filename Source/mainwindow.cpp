@@ -1006,6 +1006,8 @@ void MainWindow::actionZoomBest() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+#include "corner.h"
+
 void MainWindow::switchSimulationMode() {
     /*
      * NOTE:
@@ -1013,10 +1015,10 @@ void MainWindow::switchSimulationMode() {
      * This has nothing to do with the real action of the corresponding button
      */
 
-/*
+
     // Get the simulation bounding rect
     QRectF area = m_scene->simulationBoundingRect();
-
+/*
     // Get selected antenna type
     AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
 
@@ -1024,50 +1026,37 @@ void MainWindow::switchSimulationMode() {
     m_sim_area_item = new ReceiversArea();
     m_scene->addItem((SimulationItem*) m_sim_area_item);
     m_sim_area_item->setArea(type, area);
+
+    qDebug() << "Coverage receiver count:" << m_sim_area_item->getReceiversList().size();
 */
     m_simulation_handler->startSimulationComputation(
                 //m_sim_area_item->getReceiversList(),
                 m_simulation_handler->simulationData()->getReceiverList(),
-                m_scene->simulationBoundingRect()
+                area
             );
 
 /*
-    QRectF area = m_scene->simulationBoundingRect();
     QPen pen(QBrush(Qt::red), 4);
-    foreach (Wall *w, m_simulation_handler->simulationData()->makeBuildingWallsFiltered(area)) {
+    foreach (Wall *w, m_simulation_handler->getWallsList()) {
         m_scene->addLine(w->getLine(), pen);
-    }*/
-
-
-    /*
-    // Get the simulation bounding rect
-    QRectF area = m_scene->simulationBoundingRect();
-    AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
-
-    // Create the area rectangle
-    ReceiversArea *sim_area_item = new ReceiversArea();
-    m_scene->addItem((SimulationItem*) sim_area_item);
-
-    // Re-draw the simulation area
-    // Set the area after the item is added to the scene!
-    sim_area_item->setArea(type, area);
-
-    qDebug() << "Coverage receiver count:" << sim_area_item->getReceiversList().size();
-
-    foreach (Receiver *r, sim_area_item->getReceiversList()) {
-        r->showResults(0,100);
     }
-    */
+
+    foreach (Corner *c, m_simulation_handler->getCornersList()) {
+        m_scene->addEllipse(QRectF(c->getPosition() - QPointF(3,3), QSize(6,6)), QPen(Qt::green), QBrush(Qt::green));
+    }
+*/
+
 }
 
 void MainWindow::simulationFinished() {
-    /*
+/*
     foreach(Receiver *r, m_sim_area_item->getReceiversList()) {
         r->showResults(-100,0);
     }
-    */
+*/
 
     foreach(RayPath *rp, m_simulation_handler->getRayPathsList()) {
         m_scene->addItem(rp);
     }
+
 }

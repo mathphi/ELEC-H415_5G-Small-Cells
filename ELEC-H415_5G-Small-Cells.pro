@@ -14,6 +14,7 @@ SOURCES += \
     Source/buildingdialog.cpp \
     Source/computationunit.cpp \
     Source/constants.cpp \
+    Source/corner.cpp \
     Source/datalegenditem.cpp \
     Source/emitter.cpp \
     Source/emitterdialog.cpp \
@@ -35,6 +36,7 @@ HEADERS += \
     Source/buildingdialog.h \
     Source/computationunit.h \
     Source/constants.h \
+    Source/corner.h \
     Source/datalegenditem.h \
     Source/emitter.h \
     Source/emitterdialog.h \
