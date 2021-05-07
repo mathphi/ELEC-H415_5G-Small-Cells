@@ -130,7 +130,7 @@ double Receiver::getGain(double phi) const {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Receiver::reset() {
-    // Delete all RayPaths to this receiver
+    // Delete all RayPaths from this receiver
     foreach (RayPath *rp, m_received_rays) {
         delete rp;
     }
@@ -161,7 +161,7 @@ void Receiver::addRayPath(RayPath *rp) {
     m_received_rays.append(rp);
 
     // Add the power of this ray to the received power
-    m_received_power += rp->getPower();
+    m_received_power += rp->computePower();
 
     // Unlock the mutex to allow others threads to write
     m_mutex.unlock();
@@ -172,6 +172,7 @@ QList<RayPath*> Receiver::getRayPaths() {
 }
 
 double Receiver::receivedPower() {
+    //TODO: implement equation 3.51
     return m_received_power;
 }
 

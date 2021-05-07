@@ -41,19 +41,25 @@ public:
 
     void reset();
 
-    QList<Wall*> getBuildingWallsFiltered(QRectF boundary_rect);
-    QList<Wall*> getBuildingWallsList();
+    QList<Wall*> makeBuildingWallsFiltered(const QRectF boundary_rect) const;
+    QList<Wall*> makeBuildingWallsList() const;
 
     QList<Building*> getBuildingsList();
     QList<Emitter*> getEmittersList();
     QList<Receiver*> getReceiverList();
 
-    int maxReflectionsCount();
     SimType::SimType simulationType();
 
+    int maxReflectionsCount() const;
+    double getRelPermitivity() const;
+
+    bool reflectionEnabledNLOS() const;
+
 public slots:
-    void setReflectionsCount(int cnt);
     void setSimulationType(SimType::SimType t);
+    void setReflectionsCount(int cnt);
+    void setRelPermitivity(double perm);
+    void setReflectionEnabledNLOS(bool enabled);
 
 private:
     // Lists of all buildings/emitters/recivers on the map
@@ -61,8 +67,12 @@ private:
     QList<Emitter*> m_emitter_list;
     QList<Receiver*> m_receiver_list;
 
-    int m_reflections_count;
     SimType::SimType m_simulation_type;
+
+    // Simulation parameters
+    int m_reflections_count;
+    double m_rel_permitivity;
+    bool m_nlos_refl_en;
 };
 
 // Operator overload to write the simulation data into a file

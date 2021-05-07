@@ -20,7 +20,7 @@ public:
 
     static qreal simulationScale();
 
-    QRectF simulationBoundingRect();
+    QRectF simulationBoundingRect() const;
 
 public slots:
     void viewRectChanged(const QRectF rect, const qreal scale);

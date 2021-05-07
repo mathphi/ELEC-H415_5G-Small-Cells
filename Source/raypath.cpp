@@ -6,27 +6,56 @@
 
 #define PEN_WIDTH 1
 
-RayPath::RayPath(Emitter *em, QList<QLineF> rays, double power) : SimulationItem()
+RayPath::RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> En) : SimulationItem()
 {
     m_emitter = em;
+    m_receiver = rv;
     m_rays = rays;
-    m_power = power;
+    m_electric_field = En;
 
     // Under the buildings
     setZValue(500);
 }
 
-Emitter *RayPath::getEmitter() {
+Emitter *RayPath::getEmitter() const {
     return m_emitter;
 }
 
-double RayPath::getPower() {
-    return m_power;
+Receiver *RayPath::getReceiver() const {
+    return m_receiver;
 }
 
-QList<QLineF> RayPath::getRays() {
+QList<QLineF> RayPath::getRays() const {
     return m_rays;
 }
+
+vector<complex> RayPath::getElectricField() const {
+    return m_electric_field;
+}
+
+/**
+ * @brief RayPath::computePower
+ * @return
+ *
+ * This function computes the power of this ray path
+ * (equation 3.51, applyed to one ray)
+ *
+ */
+double RayPath::computePower() const {
+    // Incidence angle of the ray to the receiver (first ray in the list)
+    double phi = m_receiver->getIncidentRayAngle(m_rays.first());
+
+    // Get the frequency from the emitter
+    double frequency = m_emitter->getFrequency();
+
+    // Get the antenna's resistance and effective height
+    double Ra = m_receiver->getResistance();
+    vector<complex> he = m_receiver->getEffectiveHeight(phi, frequency);
+
+    // norm() = square of modulus
+    return norm(dotProduct(he, m_electric_field)) / (8.0 * Ra);
+}
+
 
 QLineF RayPath::getScaledLine(QLineF r) const {
     const qreal sim_scale = simulationScene()->simulationScale();
@@ -59,7 +88,7 @@ QPainterPath RayPath::shape() const {
 
 void RayPath::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     // Get the pen color (function of the power)
-    const double dbm_power = SimulationData::convertPowerTodBm(getPower());
+    const double dbm_power = SimulationData::convertPowerTodBm(computePower());
     //TODO: clean this colour computation...
     const QColor pen_color(SimulationData::ratioToColor(1.0 - (dbm_power+60)/-100.0));
 

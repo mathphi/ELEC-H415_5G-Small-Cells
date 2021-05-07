@@ -35,7 +35,7 @@ SimulationScene::SimulationScene(QObject *parent) : QGraphicsScene (parent)
  *
  * This function returns the bounding rect containing all simulation items of the scene
  */
-QRectF SimulationScene::simulationBoundingRect() {
+QRectF SimulationScene::simulationBoundingRect() const {
     QRectF bounding_rect;
 
     foreach (QGraphicsItem *item, items()) {

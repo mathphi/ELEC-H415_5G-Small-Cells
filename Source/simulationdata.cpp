@@ -7,11 +7,15 @@
 // The default max number of reflections
 #define MAX_REFLECTIONS_COUNT_DEFAULT 3
 
+// Default relative permittivity
+#define DEFAULT_REL_PERMITIVITY 5.0;
 
 SimulationData::SimulationData() : QObject()
 {
-    m_reflections_count = MAX_REFLECTIONS_COUNT_DEFAULT;
     m_simulation_type = SimType::PointReceiver;
+    m_reflections_count = MAX_REFLECTIONS_COUNT_DEFAULT;
+    m_rel_permitivity = DEFAULT_REL_PERMITIVITY;
+    m_nlos_refl_en = false;
 }
 
 SimulationData::SimulationData(QList<Building*> b_l, QList<Emitter*> e_l, QList<Receiver*> r_l) : SimulationData()
@@ -125,9 +129,12 @@ void SimulationData::reset() {
     m_building_list.clear();
     m_emitter_list.clear();
     m_receiver_list.clear();
+
+    //TODO: complete this
 }
 
-QList<Wall*> SimulationData::getBuildingWallsFiltered(QRectF boundary_rect) {
+QList<Wall*> SimulationData::makeBuildingWallsFiltered(const QRectF boundary_rect) const {
+    // Split the bounding rect into 4 lines
     QLineF left_l(boundary_rect.bottomLeft(), boundary_rect.topLeft());
     QLineF top_l(boundary_rect.topLeft(), boundary_rect.topRight());
     QLineF right_l(boundary_rect.topRight(), boundary_rect.bottomRight());
@@ -137,7 +144,7 @@ QList<Wall*> SimulationData::getBuildingWallsFiltered(QRectF boundary_rect) {
     QList<Wall*> walls_flt;
 
     // Check which wall is containted in a boundary
-    foreach(Wall *w, getBuildingWallsList()) {
+    foreach(Wall *w, makeBuildingWallsList()) {
         QLineF w_line = w->getLine();
 
         // Check if wall is horizontal/vertical and on the same y/x as the boundaries
@@ -149,12 +156,16 @@ QList<Wall*> SimulationData::getBuildingWallsFiltered(QRectF boundary_rect) {
             // Keep the wall if it is not in the boundaries
             walls_flt.append(w);
         }
+        else {
+            // Delete this wall if it is not used
+            delete w;
+        }
     }
 
     return walls_flt;
 }
 
-QList<Wall*> SimulationData::getBuildingWallsList() {
+QList<Wall*> SimulationData::makeBuildingWallsList() const {
     QPainterPath buildings_path;
 
     // Unite all building rectangles into one path
@@ -199,8 +210,15 @@ QList<Emitter*> SimulationData::getEmittersList() {
 QList<Receiver*> SimulationData::getReceiverList() {
     return m_receiver_list;
 }
+SimType::SimType SimulationData::simulationType() {
+    return m_simulation_type;
+}
 
-int SimulationData::maxReflectionsCount() {
+void SimulationData::setSimulationType(SimType::SimType t) {
+    m_simulation_type = t;
+}
+
+int SimulationData::maxReflectionsCount() const {
     return m_reflections_count;
 }
 
@@ -212,18 +230,28 @@ void SimulationData::setReflectionsCount(int cnt) {
     m_reflections_count = cnt;
 }
 
-SimType::SimType SimulationData::simulationType() {
-    return m_simulation_type;
+double SimulationData::getRelPermitivity() const {
+    return m_rel_permitivity;
 }
 
-void SimulationData::setSimulationType(SimType::SimType t) {
-    m_simulation_type = t;
+void SimulationData::setRelPermitivity(double perm) {
+    m_rel_permitivity = perm;
 }
+
+bool SimulationData::reflectionEnabledNLOS() const {
+    return m_nlos_refl_en;
+}
+
+void SimulationData::setReflectionEnabledNLOS(bool enabled) {
+    m_nlos_refl_en = enabled;
+}
+
 
 // ---------------------------------------------------------------------------------------------- //
 
 // +++++++++++++++++++++++++++ SIMULATION DATA FILE WRITING FUNCTIONS +++++++++++++++++++++++++++ //
 
+//TODO: update this
 QDataStream &operator>>(QDataStream &in, SimulationData *sd) {
     sd->reset();
 

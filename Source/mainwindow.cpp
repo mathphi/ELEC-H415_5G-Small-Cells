@@ -82,6 +82,9 @@ MainWindow::MainWindow(QWidget *parent)
         delete ant;
     }
 
+    // Initialize simulation area to nullptr
+    m_sim_area_item = nullptr;
+
     // Window File menu actions
     connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(close()));
     connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(actionOpen()));
@@ -125,13 +128,13 @@ MainWindow::MainWindow(QWidget *parent)
             this, SLOT(receiversAntennaChanged()));
     connect(ui->spinbox_reflections, SIGNAL(valueChanged(int)),
             m_simulation_handler->simulationData(), SLOT(setReflectionsCount(int)));
+*/
 
     // Simulation handler signals
-    connect(m_simulation_handler, SIGNAL(simulationStarted()), this, SLOT(simulationStarted()));
+    //connect(m_simulation_handler, SIGNAL(simulationStarted()), this, SLOT(simulationStarted()));
     connect(m_simulation_handler, SIGNAL(simulationFinished()), this, SLOT(simulationFinished()));
-    connect(m_simulation_handler, SIGNAL(simulationCancelled()), this, SLOT(simulationCancelled()));
-    connect(m_simulation_handler, SIGNAL(simulationProgress(double)), this, SLOT(simulationProgress(double)));
-    */
+    //connect(m_simulation_handler, SIGNAL(simulationCancelled()), this, SLOT(simulationCancelled()));
+    //connect(m_simulation_handler, SIGNAL(simulationProgress(double)), this, SLOT(simulationProgress(double)));
 
     // Scene events handling
     connect(m_scene, SIGNAL(mouseRightReleased(QGraphicsSceneMouseEvent*)),
@@ -1010,12 +1013,30 @@ void MainWindow::switchSimulationMode() {
      * This has nothing to do with the real action of the corresponding button
      */
 
+/*
+    // Get the simulation bounding rect
+    QRectF area = m_scene->simulationBoundingRect();
 
+    // Get selected antenna type
+    AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
+
+    // Create the area rectangle
+    m_sim_area_item = new ReceiversArea();
+    m_scene->addItem((SimulationItem*) m_sim_area_item);
+    m_sim_area_item->setArea(type, area);
+*/
+    m_simulation_handler->startSimulationComputation(
+                //m_sim_area_item->getReceiversList(),
+                m_simulation_handler->simulationData()->getReceiverList(),
+                m_scene->simulationBoundingRect()
+            );
+
+/*
     QRectF area = m_scene->simulationBoundingRect();
     QPen pen(QBrush(Qt::red), 4);
-    foreach (Wall *w, m_simulation_handler->simulationData()->getBuildingWallsFiltered(area)) {
+    foreach (Wall *w, m_simulation_handler->simulationData()->makeBuildingWallsFiltered(area)) {
         m_scene->addLine(w->getLine(), pen);
-    }
+    }*/
 
 
     /*
@@ -1037,4 +1058,16 @@ void MainWindow::switchSimulationMode() {
         r->showResults(0,100);
     }
     */
+}
+
+void MainWindow::simulationFinished() {
+    /*
+    foreach(Receiver *r, m_sim_area_item->getReceiversList()) {
+        r->showResults(-100,0);
+    }
+    */
+
+    foreach(RayPath *rp, m_simulation_handler->getRayPathsList()) {
+        m_scene->addItem(rp);
+    }
 }

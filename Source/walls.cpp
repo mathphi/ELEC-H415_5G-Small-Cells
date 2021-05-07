@@ -25,7 +25,7 @@ void Wall::setLine(QLineF line) {
  * This function returns the real line of the wall (in meters)
  */
 QLineF Wall::getRealLine() const {
-    qreal scale = SimulationScene::simulationScale();
+    const qreal scale = SimulationScene::simulationScale();
     return QLineF(m_line.p1() / scale, m_line.p2() / scale);
 }
 

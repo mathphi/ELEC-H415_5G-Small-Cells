@@ -12,6 +12,7 @@ SOURCES += \
     Source/antennas.cpp \
     Source/building.cpp \
     Source/buildingdialog.cpp \
+    Source/computationunit.cpp \
     Source/constants.cpp \
     Source/datalegenditem.cpp \
     Source/emitter.cpp \
@@ -32,6 +33,7 @@ HEADERS += \
     Source/antennas.h \
     Source/building.h \
     Source/buildingdialog.h \
+    Source/computationunit.h \
     Source/constants.h \
     Source/datalegenditem.h \
     Source/emitter.h \

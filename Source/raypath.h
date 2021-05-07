@@ -5,15 +5,19 @@
 #include "constants.h"
 
 class Emitter;
+class Receiver;
 
 class RayPath : public SimulationItem
 {
 public:
-    RayPath(Emitter *em, QList<QLineF> rays, double power);
+    RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> En);
 
-    Emitter *getEmitter();
-    QList<QLineF> getRays();
-    double getPower();
+    Emitter *getEmitter() const;
+    Receiver *getReceiver() const;
+    QList<QLineF> getRays() const;
+    vector<complex> getElectricField() const;
+
+    double computePower() const;
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -23,8 +27,9 @@ private:
     QLineF getScaledLine(QLineF r) const;
 
     Emitter *m_emitter;
+    Receiver *m_receiver;
     QList<QLineF> m_rays;
-    double m_power;
+    vector<complex> m_electric_field;
 };
 
 #endif // RAYPATH_H
