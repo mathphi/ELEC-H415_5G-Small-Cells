@@ -56,28 +56,31 @@
       </widget>
      </item>
      <item row="2" column="0">
-      <widget class="QLabel" name="label_power">
+      <widget class="QLabel" name="label_eirp">
        <property name="text">
-        <string>Power</string>
+        <string>EIRP</string>
        </property>
       </widget>
      </item>
      <item row="2" column="1">
-      <widget class="QDoubleSpinBox" name="spinbox_power">
+      <widget class="QDoubleSpinBox" name="spinbox_eirp">
        <property name="suffix">
-        <string> dBm</string>
+        <string> W</string>
        </property>
        <property name="decimals">
         <number>2</number>
        </property>
        <property name="minimum">
-        <double>-100.000000000000000</double>
+        <double>0.000000000000000</double>
        </property>
        <property name="maximum">
         <double>100.000000000000000</double>
        </property>
+       <property name="singleStep">
+        <double>0.100000000000000</double>
+       </property>
        <property name="value">
-        <double>20.000000000000000</double>
+        <double>2.000000000000000</double>
        </property>
       </widget>
      </item>
@@ -120,6 +123,19 @@
        </property>
        <property name="value">
         <double>100.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_power">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Power</string>
        </property>
       </widget>
      </item>

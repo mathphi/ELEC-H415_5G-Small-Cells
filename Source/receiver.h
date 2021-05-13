@@ -23,8 +23,8 @@ public:
     void setAntenna(Antenna *a);
 
     void setRotation(double angle);
-    double getRotation();
-    double getIncidentRayAngle(QLineF ray);
+    double getRotation() const;
+    double getIncidentRayAngle(QLineF ray) const;
 
     double getEfficiency() const;
     double getResistance() const;
@@ -43,7 +43,7 @@ public:
     void addRayPath(RayPath *rp);
     QList<RayPath*> getRayPaths();
 
-    double receivedPower();
+    double receivedPower() const;
 
     void showResults(int min, int max);
 

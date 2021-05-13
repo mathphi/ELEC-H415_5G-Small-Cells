@@ -19,17 +19,16 @@ const QRectF TEXT_RECT(
         EMITTER_TEXT_WIDTH,
         EMITTER_TEXT_HEIGHT);
 
-Emitter::Emitter(
-        double frequency,
-        double power,
+Emitter::Emitter(double frequency,
+        double eirp,
         Antenna *antenna) : SimulationItem()
 {
     // Over receivers and buildings
     setZValue(5000);
 
     m_frequency  = frequency;
-    m_power      = power;
     m_antenna    = antenna;
+    m_eirp       = eirp;
 
     // Setup the tooltip
     updateTooltip();
@@ -37,12 +36,12 @@ Emitter::Emitter(
 
 Emitter::Emitter(
         double frequency,
-        double power,
+        double eirp,
         double efficiency,
         AntennaType::AntennaType antenna_type)
     : Emitter(
           frequency,
-          power,
+          eirp,
           Antenna::createAntenna(antenna_type, efficiency))
 {
     // Create the associated antenna of right type
@@ -124,7 +123,11 @@ void Emitter::setFrequency(double freq) {
 }
 
 void Emitter::setPower(double power) {
-    m_power = power;
+    m_eirp = power * m_antenna->getGainMax();
+}
+
+void Emitter::setEIRP(double eirp) {
+    m_eirp = eirp;
 
     // Update the tooltip
     updateTooltip();
@@ -139,7 +142,11 @@ double Emitter::getFrequency() const {
 }
 
 double Emitter::getPower() const {
-    return m_power;
+    return m_eirp / m_antenna->getGainMax();     //Aassuming L_TX = 1 (no loss in antenna's wires)
+}
+
+double Emitter::getEIRP() const {
+    return m_eirp;
 }
 
 double Emitter::getEfficiency() const {
@@ -199,11 +206,13 @@ void Emitter::updateTooltip() {
     QString tip("<b><u>Emitter</u></b><br/>"
                 "<b><i>%1</i></b><br/>"
                 "<b>Frequency:</b> %2 GHz<br/>"
-                "<b>Power:</b> %3 dBm<br/>"
-                "<b>Efficiency:</b> %4%");
+                "<b>EIRP:</b> %3 W<br/>"
+                "<b>Power:</b> %4 dBm<br/>"
+                "<b>Efficiency:</b> %5%");
 
     tip = tip.arg(getAntenna()->getAntennaName())
             .arg(getFrequency() * 1e-9, 0, 'f', 2)
+            .arg(getEIRP(), 0, 'f', 2)
             .arg(SimulationData::convertPowerTodBm(getPower()), 0, 'f', 2)
             .arg(getEfficiency() * 100.0, 0, 'f', 1);
 

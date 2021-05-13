@@ -91,7 +91,7 @@ void Receiver::setRotation(double angle) {
  *
  * Get the rotation angle of the antenna (in radians)
  */
-double Receiver::getRotation() {
+double Receiver::getRotation() const {
     return m_rotation_angle;
 }
 
@@ -103,7 +103,7 @@ double Receiver::getRotation() {
  * Returns the incidence angle of the ray to the emitter (in radians)
  * This function assumes the ray comes into the emitter.
  */
-double Receiver::getIncidentRayAngle(QLineF ray) {
+double Receiver::getIncidentRayAngle(QLineF ray) const {
     double ray_angle = ray.angle() / 180.0 * M_PI - M_PI;
     return ray_angle - getRotation();
 }
@@ -136,7 +136,7 @@ void Receiver::reset() {
     }
 
     m_received_rays.clear();
-    m_received_power = 0;
+    m_received_power = -1;
 
     // Hide the results
     m_show_result = false;
@@ -160,8 +160,8 @@ void Receiver::addRayPath(RayPath *rp) {
     // Append the new ray path to the list
     m_received_rays.append(rp);
 
-    // Add the power of this ray to the received power
-    m_received_power += rp->computePower();
+    // Invalidate the previously computed power
+    m_received_power = -1;
 
     // Unlock the mutex to allow others threads to write
     m_mutex.unlock();
@@ -171,8 +171,36 @@ QList<RayPath*> Receiver::getRayPaths() {
     return m_received_rays;
 }
 
-double Receiver::receivedPower() {
-    //TODO: implement equation 3.51
+double Receiver::receivedPower() const {
+    // If the received power was already computed previously
+    if (m_received_power > 0)
+        return m_received_power;
+
+    // Implementation of equation 3.51
+    complex sum = 0;
+
+    foreach (RayPath *rp, m_received_rays) {
+        // Incidence angle of the ray to the receiver (first ray in the list)
+        double phi = getIncidentRayAngle(rp->getRays().first());
+
+        // Get the frequency from the emitter
+        double frequency = rp->getEmitter()->getFrequency();
+
+        // Get the antenna's resistance and effective height
+        vector<complex> he = getEffectiveHeight(phi, frequency);
+
+        // Get the electric field of the incoming ray
+        vector<complex> En = rp->getElectricField();
+
+        // Sum inside the square modulus
+        sum += dotProduct(he, En);
+    }
+
+    double Ra = getResistance();
+
+    // norm() = square of modulus
+    return norm(sum) / (8.0 * Ra);
+
     return m_received_power;
 }
 
@@ -256,7 +284,7 @@ void Receiver::paintFlat(QPainter *painter) {
 
     QColor background_color;
 
-    if (data != 0 && !isinf(data)) {
+    if (data != 0 && !isinf(data) && !isnan(data)) {
         double data_ratio = (data - m_res_min) / (double)(m_res_max - m_res_min);
 
         // Use the light color profile
@@ -367,7 +395,7 @@ void ReceiversArea::setArea(AntennaType::AntennaType type, QRectF area) {
     deleteReceivers();
     createReceivers(type, fit_area);
 }
-#include <QDebug>
+
 void ReceiversArea::createReceivers(AntennaType::AntennaType type, QRectF area) {
     if (!simulationScene())
         return;

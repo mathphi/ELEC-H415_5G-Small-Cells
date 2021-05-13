@@ -387,12 +387,12 @@ void MainWindow::configureEmitter(Emitter *em) {
         return;
 
     AntennaType::AntennaType type = emitter_dialog.getAntennaType();
-    double power      = emitter_dialog.getPower();
+    double eirp       = emitter_dialog.getEIRP();
     double frequency  = emitter_dialog.getFrequency();
     double efficiency = emitter_dialog.getEfficiency();
 
     // Update the emitter
-    em->setPower(power);
+    em->setEIRP(eirp);
     em->setFrequency(frequency);
     em->setAntenna(type, efficiency);
 }
@@ -423,12 +423,12 @@ void MainWindow::addEmitter() {
         return;
 
     AntennaType::AntennaType type = emitter_dialog.getAntennaType();
-    double power      = emitter_dialog.getPower();
+    double eirp      = emitter_dialog.getEIRP();
     double frequency  = emitter_dialog.getFrequency();
     double efficiency = emitter_dialog.getEfficiency();
 
     // Create an emitter of the selected type to place on the scene
-    m_drawing_item = new Emitter(frequency, power, efficiency, type);
+    m_drawing_item = new Emitter(frequency, eirp, efficiency, type);
 
     // We are placing an emitter
     m_draw_action = DrawActions::Emitter;
@@ -1018,7 +1018,7 @@ void MainWindow::switchSimulationMode() {
 
     // Get the simulation bounding rect
     QRectF area = m_scene->simulationBoundingRect();
-/*
+
     // Get selected antenna type
     AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
 
@@ -1028,10 +1028,10 @@ void MainWindow::switchSimulationMode() {
     m_sim_area_item->setArea(type, area);
 
     qDebug() << "Coverage receiver count:" << m_sim_area_item->getReceiversList().size();
-*/
+
     m_simulation_handler->startSimulationComputation(
-                //m_sim_area_item->getReceiversList(),
-                m_simulation_handler->simulationData()->getReceiverList(),
+                m_sim_area_item->getReceiversList(),
+                //m_simulation_handler->simulationData()->getReceiverList(),
                 area
             );
 
@@ -1049,14 +1049,14 @@ void MainWindow::switchSimulationMode() {
 }
 
 void MainWindow::simulationFinished() {
-/*
-    foreach(Receiver *r, m_sim_area_item->getReceiversList()) {
-        r->showResults(-100,0);
-    }
-*/
 
-    foreach(RayPath *rp, m_simulation_handler->getRayPathsList()) {
+    foreach(Receiver *r, m_sim_area_item->getReceiversList()) {
+        r->showResults(-100,-25);
+    }
+
+
+/*    foreach(RayPath *rp, m_simulation_handler->getRayPathsList()) {
         m_scene->addItem(rp);
     }
-
+*/
 }

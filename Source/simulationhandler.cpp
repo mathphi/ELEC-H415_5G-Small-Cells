@@ -194,10 +194,10 @@ vector<complex> SimulationHandler::computeNominalElecField(
     QLineF E_unit = r_ray.normalVector().unitVector();
 
     // Propagation constant (air)
-    complex beta = 1i*omega*LIGHT_SPEED;
+    double beta = omega/LIGHT_SPEED;
 
     // Direct (nominal) electric field (equation 8.77)
-    complex E = sqrt(60.0*GTX*PTX) * exp(-beta*dn) / dn;
+    complex E = sqrt(60.0*GTX*PTX) * exp(-1i*beta*dn) / dn;
 
     // The first component of the polarization vector is the parallel component, the second
     // is the orthogonal one.
@@ -328,6 +328,9 @@ RayPath *SimulationHandler::computeRayPath(
 
     // Return a new RayPath object
     RayPath *rp = new RayPath(emitter, receiver, rays, En);
+    qDebug() << "R:" << "En0" << abs(En[0]) << arg(En[0]);
+    qDebug() << "R:"  << "En1" << abs(En[1]) << arg(En[1]);
+    qDebug() << "R:"  << "En2" << abs(En[2]) << arg(En[2]);
     return rp;
 }
 
@@ -402,6 +405,12 @@ void SimulationHandler::recursiveReflection(
  * This function computes the diffracted ray from an emitter to a receiver via the corner c.
  */
 void SimulationHandler::computeDiffraction(Emitter *e, Receiver *r, Corner *c) {
+    // If the target point is the same as the emitter point
+    //  -> not a physics situation -> invalid raypath
+    if (e->getRealPos() == r->getRealPos()) {
+        return;
+    }
+
     // Create the rays from emitter/receiver to the corner
     QLineF ce_ray(c->getRealPos(), e->getRealPos());
     QLineF cr_ray(c->getRealPos(), r->getRealPos());
@@ -458,15 +467,48 @@ void SimulationHandler::computeDiffraction(Emitter *e, Receiver *r, Corner *c) {
     QLineF los_ray(e->getRealPos(), r->getRealPos());
 
     // Compute diffraction parameters
-    double omega = e->getFrequency()*2*M_PI;
-    double beta = omega*LIGHT_SPEED;
-    double Delta_r = (ce_ray.length() + cr_ray.length()) - los_ray.length();
+    double omega    = e->getFrequency()*2*M_PI;
+    double beta     = omega/LIGHT_SPEED;
+    double dn       = ce_ray.length() + cr_ray.length();
+    double Delta_r  = dn - los_ray.length();
 
-    // Fresnel parameter (equation 3.57)
-    double nu = sqrt(2/M_PI * beta * Delta_r);
+    // Coefficients vector
+    vector<complex> coeff = {1, 1, 1};
 
-    // Compute the diffraction coefficient F(ν) (equations 3.58, 3.59
-    //TODO
+    // Prune negative Delta_r (numerical instabilities) -> treated as a LOS ray
+    if (Delta_r > 0) {
+        // Fresnel parameter (equation 3.57)
+        double nu = sqrt(2/M_PI * beta * Delta_r);
+
+        // Compute the diffraction coefficient F(ν) (equations 3.58, 3.59)
+        double F_nu2_mod_dB = -6.9 - 20.0*log10(sqrt(pow((nu - 0.1), 2.0) + 1.0) + nu - 0.1);
+        double F_nu_mod = sqrt(pow(10.0, F_nu2_mod_dB/10.0));
+        double F_nu_arg = -M_PI_4 - M_PI_2 * pow(nu, 2.0);
+
+        // Complex diffraction coefficient F(ν)
+        complex F_nu = F_nu_mod * exp(1i*F_nu_arg);
+        coeff = {F_nu, F_nu, F_nu};
+
+        vector<complex> En = coeff * computeNominalElecField(e, ce_ray, cr_ray, dn);
+
+        qDebug() << "D:"  << "Rke" << dn;
+        qDebug() << "D:" << "Delta_r" << Delta_r;
+        qDebug() << "D:" << "nu" << nu;
+        qDebug() << "D:" << "F_nu" << F_nu_mod << F_nu_arg;
+        qDebug() << "D:" << "En0" << abs(En[0]) << arg(En[0]);
+        qDebug() << "D:" << "En1" << abs(En[1]) << arg(En[1]);
+        qDebug() << "D:" << "En2" << abs(En[2]) << arg(En[2]);
+    }
+
+    // Compute the electric field in the 3 components
+    vector<complex> En = coeff * computeNominalElecField(e, ce_ray, cr_ray, dn);
+
+    // Create a list of the rays
+    QList<QLineF> rays = QList<QLineF>() << ce_ray << cr_ray;
+
+    // Add the new RayPath object to the receiver
+    RayPath *rp = new RayPath(e, r, rays, En);
+    r->addRayPath(rp);
 }
 
 

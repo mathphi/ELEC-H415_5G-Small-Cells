@@ -19,7 +19,7 @@ public:
     ~EmitterDialog();
 
     AntennaType::AntennaType getAntennaType();
-    double getPower();
+    double getEIRP();
     double getFrequency();
     double getEfficiency();
 
@@ -27,7 +27,7 @@ protected:
     virtual void keyPressEvent(QKeyEvent *event);
 
 private slots:
-    void powerSpinboxChanged(double value);
+    void emitterConfigurationChanged();
 
 private:
     Ui::EmitterDialog *ui;

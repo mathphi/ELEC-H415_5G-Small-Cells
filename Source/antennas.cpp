@@ -145,6 +145,16 @@ double HalfWaveDipoleVert::getGain(double theta, double phi) const {
 }
 
 /**
+ * @brief HalfWaveDipoleVert::getGainMax
+ * @return
+ *
+ * This function returns the maximum gain value
+ */
+double HalfWaveDipoleVert::getGainMax() const {
+    return getGain(M_PI_2, 0);
+}
+
+/**
  * @brief HalfWaveDipoleVert::getEffectiveHeight
  * @param theta
  * @param phi
@@ -246,6 +256,16 @@ double HalfWaveDipoleHoriz::getGain(double theta, double phi) const {
 
     // Compute the gain (equations 5.44, 5.24, 5.22)
     return eta * 16.0/(3*M_PI) * pow(cos(M_PI_2 * cos(phi)) / sin(phi), 2);
+}
+
+/**
+ * @brief HalfWaveDipoleHoriz::getGainMax
+ * @return
+ *
+ * This function returns the maximum gain value
+ */
+double HalfWaveDipoleHoriz::getGainMax() const {
+    return getGain(0, M_PI_2);
 }
 
 /**

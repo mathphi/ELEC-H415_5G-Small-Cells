@@ -25,7 +25,11 @@ EmitterDialog::EmitterDialog(QWidget *parent) :
         delete ant;
     }
 
-    connect(ui->spinbox_power, SIGNAL(valueChanged(double)), this, SLOT(powerSpinboxChanged(double)));
+    connect(ui->spinbox_eirp, SIGNAL(valueChanged(double)), this, SLOT(emitterConfigurationChanged()));
+    connect(ui->combobox_antenna_type, SIGNAL(valueChanged(double)), this, SLOT(emitterConfigurationChanged()));
+    connect(ui->spinbox_efficiency, SIGNAL(valueChanged(double)), this, SLOT(emitterConfigurationChanged()));
+
+    emitterConfigurationChanged();
 }
 
 EmitterDialog::EmitterDialog(Emitter *em, QWidget *parent)
@@ -44,7 +48,9 @@ EmitterDialog::EmitterDialog(Emitter *em, QWidget *parent)
     ui->combobox_antenna_type->setCurrentIndex(type_index);
     ui->spinbox_frequency->setValue(em->getFrequency() / 1.0e9);
     ui->spinbox_efficiency->setValue(em->getEfficiency() * 100.0);
-    ui->spinbox_power->setValue(SimulationData::convertPowerTodBm(em->getPower()));
+    ui->spinbox_eirp->setValue(em->getEIRP());
+
+    emitterConfigurationChanged();
 }
 
 EmitterDialog::~EmitterDialog()
@@ -64,9 +70,8 @@ AntennaType::AntennaType EmitterDialog::getAntennaType() {
     return (AntennaType::AntennaType) ui->combobox_antenna_type->currentData().toInt();
 }
 
-double EmitterDialog::getPower() {
-    // Power is in dBm
-    return SimulationData::convertPowerToWatts(ui->spinbox_power->value());
+double EmitterDialog::getEIRP() {
+    return ui->spinbox_eirp->value();
 }
 
 double EmitterDialog::getFrequency() {
@@ -80,20 +85,21 @@ double EmitterDialog::getEfficiency() {
 }
 
 /**
- * @brief EmitterDialog::powerSpinboxChanged
- * @param value
+ * @brief EmitterDialog::emitterConfigurationChanged
  *
  * This slots update the label to show the converted power in watts
- * from the given value in dBm
+ * from the given eirp value
  */
-void EmitterDialog::powerSpinboxChanged(double value) {
+void EmitterDialog::emitterConfigurationChanged() {
     QString suffix = "W";
 
-    double power_watts = SimulationData::convertPowerToWatts(value);
+    Antenna *ant = Antenna::createAntenna(getAntennaType(), getEfficiency());
+    double power_watts = getEIRP() / ant->getGainMax();
+    double power_dbm = SimulationData::convertPowerTodBm(power_watts);
 
     // Convert to readable units and values
     if (power_watts < 1e-3) {
-        suffix = "nW";
+        suffix = "µW";
         power_watts *= 1e6;
     }
     else if (power_watts < 1) {
@@ -101,5 +107,7 @@ void EmitterDialog::powerSpinboxChanged(double value) {
         power_watts *= 1e3;
     }
 
-    ui->label_power_watts->setText(QString("= %1 %2").arg(power_watts, 0, 'f', 2).arg(suffix));
+    delete ant;
+
+    ui->label_power_watts->setText(QString("= %1 %2 = %3 dBm").arg(power_watts, 0, 'f', 2).arg(suffix).arg(power_dbm, 0, 'f', 1));
 }

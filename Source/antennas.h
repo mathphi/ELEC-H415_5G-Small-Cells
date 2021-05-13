@@ -41,6 +41,7 @@ public:
     virtual double getResistance() const = 0;
     virtual vector<complex> getEffectiveHeight(double theta, double phi, double frequency) const = 0;
     virtual double getGain(double theta, double phi) const = 0;
+    virtual double getGainMax() const = 0;
     virtual vector<complex> getPolarization() const = 0;
 
 private:
@@ -60,6 +61,7 @@ public:
     double getResistance() const override;
     vector<complex> getEffectiveHeight(double theta, double phi, double frequency) const override;
     double getGain(double theta, double phi) const override;
+    double getGainMax() const override;
     vector<complex> getPolarization() const override;
 
 };
@@ -77,6 +79,7 @@ public:
     double getResistance() const override;
     vector<complex> getEffectiveHeight(double theta, double phi, double frequency) const override;
     double getGain(double theta, double phi) const override;
+    double getGainMax() const override;
     vector<complex> getPolarization() const override;
 
 };
