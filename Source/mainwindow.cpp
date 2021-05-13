@@ -1018,7 +1018,7 @@ void MainWindow::switchSimulationMode() {
 
     // Get the simulation bounding rect
     QRectF area = m_scene->simulationBoundingRect();
-
+/*
     // Get selected antenna type
     AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
 
@@ -1028,10 +1028,10 @@ void MainWindow::switchSimulationMode() {
     m_sim_area_item->setArea(type, area);
 
     qDebug() << "Coverage receiver count:" << m_sim_area_item->getReceiversList().size();
-
+*/
     m_simulation_handler->startSimulationComputation(
-                m_sim_area_item->getReceiversList(),
-                //m_simulation_handler->simulationData()->getReceiverList(),
+                //m_sim_area_item->getReceiversList(),
+                m_simulation_handler->simulationData()->getReceiverList(),
                 area
             );
 
@@ -1049,14 +1049,14 @@ void MainWindow::switchSimulationMode() {
 }
 
 void MainWindow::simulationFinished() {
-
+/*
     foreach(Receiver *r, m_sim_area_item->getReceiversList()) {
         r->showResults(-100,-25);
     }
+*/
 
-
-/*    foreach(RayPath *rp, m_simulation_handler->getRayPathsList()) {
+    foreach(RayPath *rp, m_simulation_handler->getRayPathsList()) {
         m_scene->addItem(rp);
     }
-*/
+
 }

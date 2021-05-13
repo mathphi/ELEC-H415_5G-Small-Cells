@@ -170,13 +170,15 @@ vector<complex> SimulationHandler::computeReflection(Wall *w, QLineF in_ray) {
  * @param e_ray : The ray coming out from the emitter
  * @param r_ray : The ray coming to the receiver
  * @param dn    : The total length of the ray path
+ * @param theta : [Optional] The vertical angle at receiver side
  * @return      : The "Nominal" electric field
  */
 vector<complex> SimulationHandler::computeNominalElecField(
         Emitter *em,
         QLineF e_ray,
         QLineF r_ray,
-        double dn)
+        double dn,
+        double theta)
 {
     // Incidence angle of the ray from the emitter
     double phi = em->getIncidentRayAngle(e_ray);
@@ -185,7 +187,7 @@ vector<complex> SimulationHandler::computeNominalElecField(
     vector<complex> polarization = em->getPolarization();
 
     // Get properties from the emitter
-    double GTX = em->getGain(phi);
+    double GTX = em->getGain(theta, phi);
     double PTX = em->getPower();
     double omega = em->getFrequency()*2*M_PI;
 
@@ -208,9 +210,6 @@ vector<complex> SimulationHandler::computeNominalElecField(
         E * polarization[1]
     };
 }
-
-
-
 
 /**
  * @brief SimulationHandler::computeRayPath
@@ -328,9 +327,6 @@ RayPath *SimulationHandler::computeRayPath(
 
     // Return a new RayPath object
     RayPath *rp = new RayPath(emitter, receiver, rays, En);
-    qDebug() << "R:" << "En0" << abs(En[0]) << arg(En[0]);
-    qDebug() << "R:"  << "En1" << abs(En[1]) << arg(En[1]);
-    qDebug() << "R:"  << "En2" << abs(En[2]) << arg(En[2]);
     return rp;
 }
 
@@ -490,14 +486,6 @@ void SimulationHandler::computeDiffraction(Emitter *e, Receiver *r, Corner *c) {
         coeff = {F_nu, F_nu, F_nu};
 
         vector<complex> En = coeff * computeNominalElecField(e, ce_ray, cr_ray, dn);
-
-        qDebug() << "D:"  << "Rke" << dn;
-        qDebug() << "D:" << "Delta_r" << Delta_r;
-        qDebug() << "D:" << "nu" << nu;
-        qDebug() << "D:" << "F_nu" << F_nu_mod << F_nu_arg;
-        qDebug() << "D:" << "En0" << abs(En[0]) << arg(En[0]);
-        qDebug() << "D:" << "En1" << abs(En[1]) << arg(En[1]);
-        qDebug() << "D:" << "En2" << abs(En[2]) << arg(En[2]);
     }
 
     // Compute the electric field in the 3 components
@@ -508,6 +496,61 @@ void SimulationHandler::computeDiffraction(Emitter *e, Receiver *r, Corner *c) {
 
     // Add the new RayPath object to the receiver
     RayPath *rp = new RayPath(e, r, rays, En);
+    r->addRayPath(rp);
+}
+
+/**
+ * @brief SimulationHandler::computeGroundReflection
+ * @param e
+ * @param r
+ *
+ * This function computes the ray reflected off the ground.
+ * This computation assumes the emitter and the receiver are both at the same height.
+ * It is also assumed that this ray is computed only when LOS is free (no obstacle).
+ */
+void SimulationHandler::computeGroundReflection(Emitter *e, Receiver *r) {
+    // Get the LOS ray between emitter and receiver
+    QLineF los_ray(e->getRealPos(), r->getRealPos());
+
+    // Get the middle of the LOS
+    double mid_los = los_ray.length() / 2.0;
+
+    // Get the simulation height
+    double sim_h = simulationData()->getSimulationHeight();
+
+    // Compute the reflected ray
+    double dn = 2.0 * sqrt(pow(mid_los, 2.0) + pow(sim_h, 2.0));
+
+    // Get incident angle to the emitter/receiver and reflection angle
+    double theta_er = M_PI_2 + atan(sim_h / mid_los);
+    double theta_i  = M_PI - theta_er;
+
+    // Relative perittivity
+    double e_r = simulationData()->getRelPermitivity();
+
+    // Compute the reflection coefficient for an orthogonal polarization (equation 3.4)
+    const complex Gamma_orth = (cos(theta_i) - sqrt(e_r) * sqrt(1 - 1/e_r * pow(sin(theta_i), 2))) /
+                               (cos(theta_i) + sqrt(e_r) * sqrt(1 - 1/e_r * pow(sin(theta_i), 2)));
+
+    // Compute the reflection coefficient for a parallel polarization (equation 3.26)
+    const complex Gamma_para = (cos(theta_i) - 1/sqrt(e_r) * sqrt(1 - 1/e_r * pow(sin(theta_i), 2))) /
+                               (cos(theta_i) + 1/sqrt(e_r) * sqrt(1 - 1/e_r * pow(sin(theta_i), 2)));
+
+    // Return as a 3-D vector
+    vector<complex> refl_coef {
+        Gamma_para,
+        Gamma_para,
+        Gamma_orth
+    };
+
+    // The multiplication is made component by component (not a cross product).
+    vector<complex> En = refl_coef * computeNominalElecField(e, los_ray, los_ray, dn, theta_er);
+
+    // Rays list
+    QList<QLineF> rays = QList<QLineF>() << los_ray;
+
+    // Add the new RayPath object to the receiver
+    RayPath *rp = new RayPath(e, r, rays, En, theta_er, true);
     r->addRayPath(rp);
 }
 
@@ -551,6 +594,11 @@ void SimulationHandler::computeReceiverRays(Receiver *r) {
 
         // Add it to his receiver
         r->addRayPath(LOS);
+
+        // Compute reflection off the ground only if LOS (else it will cross a wall)
+        if (LOS != nullptr) {
+            computeGroundReflection(e, r);
+        }
 
         // Compute reflections only if LOS (or if NLOS reflection forced by settings)
         if (LOS != nullptr || simulationData()->reflectionEnabledNLOS())

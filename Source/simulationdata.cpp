@@ -11,12 +11,16 @@
 // Default relative permittivity
 #define DEFAULT_REL_PERMITIVITY 5.0;
 
+// Default height for the simulation plane
+#define DEFAULT_SIM_HEIGHT  2.0;    // Meters
+
 SimulationData::SimulationData() : QObject()
 {
     m_simulation_type = SimType::PointReceiver;
     m_reflections_count = MAX_REFLECTIONS_COUNT_DEFAULT;
-    m_rel_permitivity = DEFAULT_REL_PERMITIVITY;
     m_nlos_refl_en = false;
+    m_rel_permitivity = DEFAULT_REL_PERMITIVITY;
+    m_simulation_height = DEFAULT_SIM_HEIGHT;
 }
 
 SimulationData::SimulationData(QList<Building*> b_l, QList<Emitter*> e_l, QList<Receiver*> r_l) : SimulationData()
@@ -273,14 +277,6 @@ void SimulationData::setReflectionsCount(int cnt) {
     m_reflections_count = cnt;
 }
 
-double SimulationData::getRelPermitivity() const {
-    return m_rel_permitivity;
-}
-
-void SimulationData::setRelPermitivity(double perm) {
-    m_rel_permitivity = perm;
-}
-
 bool SimulationData::reflectionEnabledNLOS() const {
     return m_nlos_refl_en;
 }
@@ -289,6 +285,21 @@ void SimulationData::setReflectionEnabledNLOS(bool enabled) {
     m_nlos_refl_en = enabled;
 }
 
+double SimulationData::getRelPermitivity() const {
+    return m_rel_permitivity;
+}
+
+void SimulationData::setRelPermitivity(double perm) {
+    m_rel_permitivity = perm;
+}
+
+double SimulationData::getSimulationHeight() const {
+    return m_simulation_height;
+}
+
+void SimulationData::setSimulationHeight(double height) {
+    m_simulation_height = height;
+}
 
 // ---------------------------------------------------------------------------------------------- //
 

@@ -28,7 +28,13 @@ public:
 
     bool checkIntersections(QLineF ray, Wall *origin_wall, Wall *target_wall);
     vector<complex> computeReflection(Wall *w, QLineF in_ray);
-    vector<complex> computeNominalElecField(Emitter *em, QLineF emitter_ray, QLineF receiver_ray, double dn);
+
+    vector<complex> computeNominalElecField(
+            Emitter *em,
+            QLineF emitter_ray,
+            QLineF receiver_ray,
+            double dn,
+            double theta = M_PI_2);
 
     RayPath *computeRayPath(
             Emitter *emitter,
@@ -45,6 +51,7 @@ public:
             int level = 1);
 
     void computeDiffraction(Emitter *e, Receiver *r, Corner *c);
+    void computeGroundReflection(Emitter *e, Receiver *r);
 
     void computeAllRays();
     void computeReceiverRays(Receiver *r);

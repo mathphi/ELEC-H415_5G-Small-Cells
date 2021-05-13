@@ -133,7 +133,7 @@ double HalfWaveDipoleVert::getGain(double theta, double phi) const {
     Q_UNUSED(phi);
 
     // This function equals 0 for theta == 0, but avoid the 0/0 situation
-    if (theta == 0) {
+    if (fmod(theta, M_PI) == 0) {
         return 0;
     }
 
@@ -172,7 +172,7 @@ vector<complex> HalfWaveDipoleVert::getEffectiveHeight(
     Q_UNUSED(phi);
 
     // This function equals 0 for theta == 0, but avoid the 0/0 situation
-    if (theta == 0) {
+    if (fmod(theta, M_PI) == 0) {
         return {0, 0, 0};
     }
 
@@ -247,7 +247,7 @@ double HalfWaveDipoleHoriz::getGain(double theta, double phi) const {
     Q_UNUSED(theta);
 
     // This function equals 0 for theta == 0, but avoid the 0/0 situation
-    if (phi == 0) {
+    if (fmod(phi, M_PI) == 0) {
         return 0;
     }
 
@@ -288,7 +288,7 @@ vector<complex> HalfWaveDipoleHoriz::getEffectiveHeight(
     Q_UNUSED(theta);
 
     // This function equals 0 for theta == 0, but avoid the 0/0 situation
-    if (phi == 0) {
+    if (fmod(phi, M_PI) == 0) {
         return {0, 0, 0};
     }
 

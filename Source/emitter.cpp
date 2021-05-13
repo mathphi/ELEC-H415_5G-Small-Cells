@@ -171,6 +171,18 @@ vector<complex> Emitter::getEffectiveHeight(double phi) const {
 
 /**
  * @brief Emitter::getGain
+ * @param theta
+ * @param phi
+ * @return
+ *
+ * Returns the antenna's gain
+ */
+double Emitter::getGain(double theta, double phi) const {
+    return m_antenna->getGain(theta, phi);
+}
+
+/**
+ * @brief Emitter::getGain
  * @param phi
  * @return
  *

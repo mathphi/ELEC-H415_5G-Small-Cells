@@ -10,14 +10,17 @@ class Receiver;
 class RayPath : public SimulationItem
 {
 public:
-    RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> En);
+    RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> En, double theta = M_PI_2, bool is_gnd = false);
 
     Emitter *getEmitter() const;
     Receiver *getReceiver() const;
     QList<QLineF> getRays() const;
     vector<complex> getElectricField() const;
+    double getVerticalAngle() const;
 
     double computePower() const;
+
+    bool isGround() const;
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -30,6 +33,9 @@ private:
     Receiver *m_receiver;
     QList<QLineF> m_rays;
     vector<complex> m_electric_field;
+    double m_theta;
+
+    bool m_is_ground;
 };
 
 #endif // RAYPATH_H

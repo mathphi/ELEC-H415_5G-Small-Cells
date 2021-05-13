@@ -53,15 +53,17 @@ public:
 
     SimType::SimType simulationType();
 
-    int maxReflectionsCount() const;
     double getRelPermitivity() const;
+    double getSimulationHeight() const;
 
+    int maxReflectionsCount() const;
     bool reflectionEnabledNLOS() const;
 
 public slots:
     void setSimulationType(SimType::SimType t);
-    void setReflectionsCount(int cnt);
     void setRelPermitivity(double perm);
+    void setSimulationHeight(double height);
+    void setReflectionsCount(int cnt);
     void setReflectionEnabledNLOS(bool enabled);
 
 private:
@@ -70,11 +72,14 @@ private:
     QList<Emitter*> m_emitter_list;
     QList<Receiver*> m_receiver_list;
 
-    SimType::SimType m_simulation_type;
 
     // Simulation parameters
-    int m_reflections_count;
     double m_rel_permitivity;
+    double m_simulation_height;
+
+    // Simulation settings
+    SimType::SimType m_simulation_type;
+    int m_reflections_count;
     bool m_nlos_refl_en;
 };
 

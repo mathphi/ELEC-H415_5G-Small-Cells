@@ -43,6 +43,7 @@ public:
     double getResistance() const;
     vector<complex> getEffectiveHeight(double phi) const;
     double getGain(double phi) const;
+    double getGain(double theta, double phi) const;
     vector<complex> getPolarization() const;
 
     void updateTooltip();

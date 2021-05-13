@@ -120,6 +120,10 @@ vector<complex> Receiver::getEffectiveHeight(double phi, double frequency) const
     return m_antenna->getEffectiveHeight(M_PI_2, phi, frequency);
 }
 
+vector<complex> Receiver::getEffectiveHeight(double theta, double phi, double frequency) const {
+    return m_antenna->getEffectiveHeight(theta, phi, frequency);
+}
+
 double Receiver::getGain(double phi) const {
     return m_antenna->getGain(M_PI_2, phi);
 }
@@ -187,7 +191,7 @@ double Receiver::receivedPower() const {
         double frequency = rp->getEmitter()->getFrequency();
 
         // Get the antenna's resistance and effective height
-        vector<complex> he = getEffectiveHeight(phi, frequency);
+        vector<complex> he = getEffectiveHeight(rp->getVerticalAngle(), phi, frequency);
 
         // Get the electric field of the incoming ray
         vector<complex> En = rp->getElectricField();

@@ -6,12 +6,16 @@
 
 #define PEN_WIDTH 1
 
-RayPath::RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> En) : SimulationItem()
+RayPath::RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> En, double theta, bool is_gnd)
+    : SimulationItem()
 {
     m_emitter = em;
     m_receiver = rv;
     m_rays = rays;
     m_electric_field = En;
+    m_theta = theta;
+
+    m_is_ground = is_gnd;
 
     // Under the buildings
     setZValue(500);
@@ -33,6 +37,14 @@ vector<complex> RayPath::getElectricField() const {
     return m_electric_field;
 }
 
+double RayPath::getVerticalAngle() const {
+    return m_theta;
+}
+
+bool RayPath::isGround() const {
+    return m_is_ground;
+}
+
 /**
  * @brief RayPath::computePower
  * @return
@@ -50,7 +62,7 @@ double RayPath::computePower() const {
 
     // Get the antenna's resistance and effective height
     double Ra = m_receiver->getResistance();
-    vector<complex> he = m_receiver->getEffectiveHeight(phi, frequency);
+    vector<complex> he = m_receiver->getEffectiveHeight(m_theta, phi, frequency);
 
     // norm() = square of modulus
     return norm(dotProduct(he, m_electric_field)) / (8.0 * Ra);
@@ -79,7 +91,7 @@ QPainterPath RayPath::shape() const {
 
     // Take care of the width of the pen
     QPainterPathStroker ps;
-    ps.setWidth(PEN_WIDTH);
+    ps.setWidth(PEN_WIDTH*2);
 
     QPainterPath p = ps.createStroke(path);
     p.addPath(path);
@@ -93,7 +105,14 @@ void RayPath::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget
     const QColor pen_color(SimulationData::ratioToColor(1.0 - (dbm_power+60)/-100.0));
 
     // Set the pen for this raypath
-    painter->setPen(QPen(pen_color, PEN_WIDTH));
+    if (!m_is_ground) {
+        painter->setPen(QPen(pen_color, PEN_WIDTH));
+    }
+    else {
+        QPen pen(pen_color, PEN_WIDTH*2, Qt::DashLine);
+        pen.setDashPattern({PEN_WIDTH * 5.0, PEN_WIDTH * 5.0});
+        painter->setPen(pen);
+    }
 
     // Draw each ray as a line
     for (int i = 0 ; i < m_rays.size() ; i++) {
