@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>850</width>
-    <height>700</height>
+    <width>1000</width>
+    <height>675</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>850</width>
-    <height>650</height>
+    <height>675</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -188,7 +188,7 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>170</width>
+           <width>200</width>
            <height>10</height>
           </size>
          </property>
@@ -218,7 +218,7 @@
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+          <enum>QSizePolicy::Maximum</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -241,13 +241,7 @@
        <item>
         <widget class="QComboBox" name="combobox_simType">
          <property name="toolTip">
-          <string>&lt;html&gt;
-&lt;head/&gt;
-&lt;body&gt;
-&lt;p&gt;&lt;b&gt;Récepteurs ponctuels&amp;nbsp;:&lt;/b&gt; Calculer la puissance moyenne aux récepteurs placés sur le plan.&lt;/p&gt;
-&lt;p&gt;&lt;b&gt;Couverture totale&amp;nbsp;:&lt;/b&gt; Calculer la puissance moyenne sur chaque m² de la zone de simulation.&lt;/p&gt;
-&lt;/body&gt;
-&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the average power at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the average power over each m² of the simulation area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <item>
           <property name="text">
@@ -267,7 +261,7 @@
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+          <enum>QSizePolicy::Maximum</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -302,43 +296,7 @@
           <item>
            <widget class="QComboBox" name="combobox_antennas_type"/>
           </item>
-          <item>
-           <spacer name="verticalSpacer_14">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Fixed</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>10</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
          </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Max. reflections count:</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QSpinBox" name="spinbox_reflections">
-         <property name="minimum">
-          <number>0</number>
-         </property>
-         <property name="value">
-          <number>3</number>
-         </property>
         </widget>
        </item>
        <item>
@@ -347,7 +305,30 @@
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+          <enum>QSizePolicy::Maximum</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="button_simSetup">
+         <property name="text">
+          <string>Simulation setup</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_13">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Maximum</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -360,14 +341,14 @@
        <item>
         <widget class="QPushButton" name="button_simControl">
          <property name="text">
-          <string>Start the simulation</string>
+          <string>Start simulation</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="button_simReset">
          <property name="text">
-          <string>Reset the simulation</string>
+          <string>Reset simulation</string>
          </property>
         </widget>
        </item>
@@ -377,7 +358,7 @@
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+          <enum>QSizePolicy::Maximum</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -388,97 +369,151 @@
         </spacer>
        </item>
        <item>
-        <widget class="QCheckBox" name="checkbox_rays">
-         <property name="text">
-          <string>Show rays</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
+        <widget class="QWidget" name="group_show_rays" native="true">
+         <layout class="QVBoxLayout" name="verticalLayout_6">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QCheckBox" name="checkbox_rays">
+            <property name="text">
+             <string>Show rays</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_threshold_msg">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only display rays whose incident power at the receiver is higher than the threshold&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Display threshold*:</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QSlider" name="slider_threshold">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only display rays whose incident power at the receiver is higher than the threshold&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="minimum">
+               <number>-200</number>
+              </property>
+              <property name="maximum">
+               <number>-20</number>
+              </property>
+              <property name="value">
+               <number>-100</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="tickPosition">
+               <enum>QSlider::TicksBelow</enum>
+              </property>
+              <property name="tickInterval">
+               <number>20</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_threshold_val">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>-100 dBm</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_threshold_msg">
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Display only the rays whose power at the receiver is higher than the threshold&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <widget class="QGroupBox" name="group_result_type">
+         <property name="title">
+          <string>Displayed result:</string>
          </property>
-         <property name="text">
-          <string>Display threshold*:</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <property name="leftMargin">
+           <number>11</number>
+          </property>
+          <property name="topMargin">
+           <number>11</number>
+          </property>
+          <property name="rightMargin">
+           <number>11</number>
+          </property>
+          <property name="bottomMargin">
+           <number>11</number>
+          </property>
+          <item>
+           <widget class="QRadioButton" name="radio_result_power">
+            <property name="text">
+             <string>Received Power</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radio_result_SNR">
+            <property name="text">
+             <string>User-end SNR</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radio_result_delay">
+            <property name="text">
+             <string>Delay Spread</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radio_result_rice">
+            <property name="text">
+             <string>Rice Factor</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <item>
-          <widget class="QSlider" name="slider_threshold">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string>N'afficher que les rayons dont la puissance au récepteur est plus élevée que le seuil</string>
-           </property>
-           <property name="minimum">
-            <number>-200</number>
-           </property>
-           <property name="maximum">
-            <number>-20</number>
-           </property>
-           <property name="value">
-            <number>-100</number>
-           </property>
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="tickPosition">
-            <enum>QSlider::TicksBelow</enum>
-           </property>
-           <property name="tickInterval">
-            <number>20</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_threshold_val">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>-100 dBm</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_13">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>15</height>
-          </size>
-         </property>
-        </spacer>
        </item>
        <item>
         <spacer name="verticalSpacer_11">
@@ -486,7 +521,7 @@
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+          <enum>QSizePolicy::Maximum</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -509,7 +544,7 @@
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+          <enum>QSizePolicy::Maximum</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -546,20 +581,40 @@
         </spacer>
        </item>
        <item>
-        <widget class="QProgressBar" name="progressbar_simulation">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="maximum">
-          <number>100</number>
-         </property>
-         <property name="value">
-          <number>24</number>
-         </property>
-        </widget>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QProgressBar" name="progressbar_simulation">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximum">
+            <number>100</number>
+           </property>
+           <property name="value">
+            <number>24</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_14">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Minimum</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>25</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
        </item>
        <item>
         <spacer name="horizontalSpacer_2">
@@ -571,7 +626,7 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>170</width>
+           <width>200</width>
            <height>10</height>
           </size>
          </property>
@@ -587,8 +642,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>850</width>
-     <height>22</height>
+     <width>1000</width>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -611,6 +666,8 @@
     <addaction name="separator"/>
     <addaction name="actionEraseObject"/>
     <addaction name="actionEraseAll"/>
+    <addaction name="separator"/>
+    <addaction name="actionSimulation_setup"/>
    </widget>
    <widget class="QMenu" name="menuAffichage">
     <property name="title">
@@ -704,6 +761,11 @@
   <action name="actionZoomFit">
    <property name="text">
     <string>Fit view</string>
+   </property>
+  </action>
+  <action name="actionSimulation_setup">
+   <property name="text">
+    <string>Simulation setup...</string>
    </property>
   </action>
  </widget>

@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include <QGraphicsScene>
+#include <QButtonGroup>
+#include <QActionGroup>
 
 #include "simulationscene.h"
 #include "simulationhandler.h"
@@ -88,14 +90,46 @@ private slots:
     void configureReceiver(Receiver *re);
 
     void switchSimulationMode();
+    void switchEditSceneMode();
 
+    void simulationTypeChanged();
+    void receiversAntennaChanged();
+
+    void simulationSetupAction();
+    void simulationControlAction();
+    void simulationResetAction();
+    void exportSimulationAction();
+
+    void raysCheckboxToggled(bool);
+    void raysThresholdChanged(int val);
+
+    void resultTypeSelectionChanged(int, bool checked);
+
+    void simulationStarted();
     void simulationFinished();
+    void simulationCancelled();
+    void simulationProgress(double);
 
 private:
+    void updateSimulationUI();
+    void updateSimulationScene();
+    void updateResultTypeRadios();
+    void setPointReceiversVisible(bool visible);
+    void createSimArea();
+    void deleteSimArea();
+    void simulationReset();
+    bool askSimulationReset();
+    void filterRaysThreshold();
+    void showReceiversResult();
+    void showResultsRays();
+    void showResultHeatMap();
+
+
     QPoint moveAligned(QPoint start, QPoint actual);
     QPoint attractivePoint(QPoint actual);
 
     Ui::MainWindow *ui;
+    UIMode::UIMode m_ui_mode;
 
     SimulationScene *m_scene;
     SimulationHandler *m_simulation_handler;
@@ -109,8 +143,9 @@ private:
 
     bool m_dragging_view;
 
-    UIMode::UIMode m_ui_mode;
-
     ReceiversArea *m_sim_area_item;
+
+    QButtonGroup *m_result_radio_grp;
+    QActionGroup *m_map_edit_act_grp;
 };
 #endif // MAINWINDOW_H

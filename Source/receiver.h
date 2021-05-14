@@ -8,6 +8,15 @@
 #include "raypath.h"
 #include "antennas.h"
 
+namespace ResultType {
+enum ResultType {
+    Power,
+    SNR,
+    DelaySpread,
+    RiceFactor
+};
+}
+
 class Receiver : public SimulationItem
 {
 public:
@@ -19,7 +28,7 @@ public:
     Receiver *clone();
 
     Antenna *getAntenna();
-    void setAntenna(AntennaType::AntennaType type, double efficiency);
+    void setAntenna(AntennaType::AntennaType type, double efficiency = 1.0);
     void setAntenna(Antenna *a);
 
     void setRotation(double angle);
@@ -44,9 +53,12 @@ public:
     void addRayPath(RayPath *rp);
     QList<RayPath*> getRayPaths();
 
-    double receivedPower() const;
+    double receivedPower();
+    double userEndSNR();
+    double delaySpread();
+    double riceFactor();
 
-    void showResults(int min, int max);
+    void showResults(ResultType::ResultType type, int min, int max);
 
     void generateIdleTooltip();
     void generateResultsTooltip();
@@ -56,8 +68,13 @@ private:
     Antenna *m_antenna;
 
     QList<RayPath*> m_received_rays;
-    double m_received_power;
 
+    double m_received_power;
+    double m_user_end_SNR;
+    double m_delay_spread;
+    double m_rice_factor;
+
+    ResultType::ResultType m_result_type;
     int m_res_min;
     int m_res_max;
 
@@ -78,8 +95,11 @@ public:
     ReceiversArea();
     ~ReceiversArea();
 
-    QList<Receiver*> getReceiversList();
+    void getReceivedDataBounds(ResultType::ResultType type, double *min, double *max) const;
+
+    QList<Receiver*> getReceiversList() const;
     void setArea(AntennaType::AntennaType type, QRectF area);
+    QRectF getArea();
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -90,6 +110,7 @@ private:
     void deleteReceivers();
 
     QList<Receiver*> m_receivers_list;
+    QRectF m_area;
 };
 
 #endif // RECEIVER_H

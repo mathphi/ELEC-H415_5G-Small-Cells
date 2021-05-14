@@ -1,14 +1,14 @@
 #include "computationunit.h"
 #include "simulationhandler.h"
 
-ComputationUnit::ComputationUnit(SimulationHandler *h, Receiver *r) :
+ComputationUnit::ComputationUnit(SimulationHandler *h, QList<Receiver *> r_lst) :
     QObject(h), QRunnable()
 {
     // Don't delete the computation unit when finished
     setAutoDelete(false);
 
     m_handler = h;
-    m_receiver = r;
+    m_receivers_list = r_lst;
 
     // Mark this CU as stopped
     m_running = false;
@@ -30,8 +30,11 @@ void ComputationUnit::run() {
     // Emit computation started signal
     emit computationStarted();
 
-    // Compute the reflections recursively
-    m_handler->computeReceiverRays(m_receiver);
+    // For all receivers of the list
+    foreach(Receiver *r, m_receivers_list) {
+        // Compute the reflections recursively
+        m_handler->computeReceiverRays(r);
+    }
 
     // Mark this CU as stopped
     m_running = false;

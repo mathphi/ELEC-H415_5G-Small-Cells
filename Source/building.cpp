@@ -14,6 +14,8 @@ Building::Building(QRectF rect) : SimulationItem() {
     m_build_size = rect.size();
     setPos(rect.topLeft());
 
+    setZValue(500);
+
     setTransformOriginPoint(m_build_size.width()/2, m_build_size.height()/2);
 }
 
@@ -56,6 +58,19 @@ QRectF Building::getRect() const {
     return QRectF(
         pos(),
         m_build_size
+    );
+}
+
+/**
+ * @brief Building::getRealRect
+ * @return
+ *
+ * Return the absolute rectangle in meters corresponding to the building
+ */
+QRectF Building::getRealRect() const {
+    return QRectF(
+        pos() / simulationScene()->simulationScale(),
+        m_build_size / simulationScene()->simulationScale()
     );
 }
 

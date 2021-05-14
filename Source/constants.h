@@ -23,12 +23,13 @@ using namespace std::literals::complex_literals;
 #endif
 
 // Universal constants
-const double LIGHT_SPEED = 299792458.0;     // [m/s]
-const double EPSILON_0   = 8.85418782e-12;  // [F/m]
-const double MU_0        = 12.566370614e-7; // [T m/A]
+static const double LIGHT_SPEED = 299792458.0;     // [m/s]
+static const double EPSILON_0   = 8.85418782e-12;  // [F/m]
+static const double MU_0        = 12.566370614e-7; // [T m/A]
+static const double K_boltz     = 1.380649e-23;    // [J K−1]
 
 // Vacuum impedance
-const double Z_0 = sqrt(MU_0/EPSILON_0);  // [Ohm]
+static const double Z_0 = sqrt(MU_0/EPSILON_0);  // [Ohm]
 
 // Operator overload for vector component to component multiplication.
 // This is only valid for 3-dimensionnal vectors.

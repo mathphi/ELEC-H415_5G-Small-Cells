@@ -24,6 +24,7 @@ SOURCES += \
     Source/receiver.cpp \
     Source/receiverdialog.cpp \
     Source/scaleruleritem.cpp \
+    Source/simsetupdialog.cpp \
     Source/simulationdata.cpp \
     Source/simulationhandler.cpp \
     Source/simulationitem.cpp \
@@ -45,6 +46,7 @@ HEADERS += \
     Source/receiver.h \
     Source/receiverdialog.h \
     Source/scaleruleritem.h \
+    Source/simsetupdialog.h \
     Source/simulationdata.h \
     Source/simulationhandler.h \
     Source/simulationitem.h \
@@ -55,7 +57,8 @@ FORMS += \
     Source/buildingdialog.ui \
     Source/emitterdialog.ui \
     Source/mainwindow.ui \
-    Source/receiverdialog.ui
+    Source/receiverdialog.ui \
+    Source/simsetupdialog.ui
 
 DISTFILES += \
     README.md

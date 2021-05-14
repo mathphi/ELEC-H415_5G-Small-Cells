@@ -26,7 +26,7 @@ EmitterDialog::EmitterDialog(QWidget *parent) :
     }
 
     connect(ui->spinbox_eirp, SIGNAL(valueChanged(double)), this, SLOT(emitterConfigurationChanged()));
-    connect(ui->combobox_antenna_type, SIGNAL(valueChanged(double)), this, SLOT(emitterConfigurationChanged()));
+    connect(ui->combobox_antenna_type, SIGNAL(currentIndexChanged(int)), this, SLOT(emitterConfigurationChanged()));
     connect(ui->spinbox_efficiency, SIGNAL(valueChanged(double)), this, SLOT(emitterConfigurationChanged()));
 
     emitterConfigurationChanged();

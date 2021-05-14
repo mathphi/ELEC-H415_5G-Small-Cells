@@ -18,6 +18,7 @@ public:
 
     QSizeF getSize() const;
     QRectF getRect() const;
+    QRectF getRealRect() const;
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;

@@ -2,8 +2,10 @@
 #include "receiver.h"
 #include "simulationscene.h"
 #include "simulationdata.h"
+#include "simulationhandler.h"
 
 #include <QPainter>
+#include <QApplication>
 
 #define RECEIVER_AREA_SIZE      (1.0 * simulationScene()->simulationScale())
 #define RECEIVER_CROSS_SIZE     (4.0 * simulationScene()->simulationScale())
@@ -24,8 +26,15 @@ Receiver::Receiver(Antenna *antenna) : SimulationItem()
     m_show_result = false;
 
     // Default type and range of the result
-    m_res_min = 54;
-    m_res_max = 433;
+    m_result_type = ResultType::Power;
+    m_res_min = -100;
+    m_res_max = 0;
+
+    // Initialize the computation values
+    m_received_power = NAN;
+    m_user_end_SNR   = NAN;
+    m_delay_spread   = NAN;
+    m_rice_factor    = NAN;
 
     // Over buildings
     setZValue(2000);
@@ -37,7 +46,7 @@ Receiver::Receiver(Antenna *antenna) : SimulationItem()
 Receiver::Receiver(AntennaType::AntennaType antenna_type, double efficiency)
     : Receiver(Antenna::createAntenna(antenna_type, efficiency))
 {
-    //TODO: show a default tooltip + a label or polygain to recognize the antenna ?
+
 }
 
 Receiver::~Receiver()
@@ -140,7 +149,10 @@ void Receiver::reset() {
     }
 
     m_received_rays.clear();
-    m_received_power = -1;
+    m_received_power = NAN;
+    m_user_end_SNR   = NAN;
+    m_delay_spread   = NAN;
+    m_rice_factor    = NAN;
 
     // Hide the results
     m_show_result = false;
@@ -165,7 +177,10 @@ void Receiver::addRayPath(RayPath *rp) {
     m_received_rays.append(rp);
 
     // Invalidate the previously computed power
-    m_received_power = -1;
+    m_received_power = NAN;
+    m_user_end_SNR   = NAN;
+    m_delay_spread   = NAN;
+    m_rice_factor    = NAN;
 
     // Unlock the mutex to allow others threads to write
     m_mutex.unlock();
@@ -175,9 +190,15 @@ QList<RayPath*> Receiver::getRayPaths() {
     return m_received_rays;
 }
 
-double Receiver::receivedPower() const {
+/**
+ * @brief Receiver::receivedPower
+ * @return
+ *
+ * This function computes the received power using the equation (3.51)
+ */
+double Receiver::receivedPower() {
     // If the received power was already computed previously
-    if (m_received_power > 0)
+    if (!isnan(m_received_power))
         return m_received_power;
 
     // Implementation of equation 3.51
@@ -185,7 +206,7 @@ double Receiver::receivedPower() const {
 
     foreach (RayPath *rp, m_received_rays) {
         // Incidence angle of the ray to the receiver (first ray in the list)
-        double phi = getIncidentRayAngle(rp->getRays().first());
+        double phi = getIncidentRayAngle(rp->getRays().at(0));
 
         // Get the frequency from the emitter
         double frequency = rp->getEmitter()->getFrequency();
@@ -203,9 +224,69 @@ double Receiver::receivedPower() const {
     double Ra = getResistance();
 
     // norm() = square of modulus
-    return norm(sum) / (8.0 * Ra);
+    m_received_power =  norm(sum) / (8.0 * Ra);
 
     return m_received_power;
+}
+
+/**
+ * @brief Receiver::userEndSNR
+ * @return
+ *
+ * This function computes the SNR at user-end (as described in Table 3.3, p.60)
+ */
+double Receiver::userEndSNR() {
+    // If the user-end SNR was already computed previously
+    if (!isnan(m_user_end_SNR))
+        return m_user_end_SNR;
+
+    const double temperature = SimulationHandler::simulationData()->getSimulationTemperature();
+    const double bandwidth = SimulationHandler::simulationData()->getSimulationBandwidth();
+
+    const double therm_noise = 10.0 * log10(K_boltz * temperature * bandwidth / 1e-3);
+    const double noise_fig = SimulationHandler::simulationData()->getSimulationNoiseFigure();
+
+    const double noise_floor = therm_noise + noise_fig;
+    const double rx_power = SimulationData::convertPowerTodBm(receivedPower());
+
+    // SNR = RX_power [dBm] - Noise_power [dBm]
+    m_user_end_SNR = rx_power - noise_floor;
+
+    return m_user_end_SNR;
+}
+
+/**
+ * @brief Receiver::delaySpread
+ * @return
+ *
+ * This function computes the delay spread.
+ * The delay spread is defined if there is only one emitter in the simulation.
+ */
+double Receiver::delaySpread() {
+    if (SimulationHandler::simulationData()->getEmittersList().size() != 1) {
+        return NAN;
+    }
+
+    // Equation (1.24) & 1.2.3 exercises report
+
+    return m_delay_spread;
+}
+
+/**
+ * @brief Receiver::riceFactor
+ * @return
+ *
+ * This function computes the rice factor.
+ * The rice factor is defined if there is only one emitter in the simulation.
+ */
+double Receiver::riceFactor() {
+    if (SimulationHandler::simulationData()->getEmittersList().size() != 1) {
+        return NAN;
+    }
+
+    // Equation (4.18)
+
+    return m_rice_factor;
 }
 
 
@@ -284,7 +365,22 @@ void Receiver::paintFlat(QPainter *painter) {
         return;
     }
 
-    double data = SimulationData::convertPowerTodBm(receivedPower());
+    double data = 0;
+
+    switch (m_result_type) {
+    case ResultType::Power:
+        data = SimulationData::convertPowerTodBm(receivedPower());
+        break;
+    case ResultType::SNR:
+        data = userEndSNR();
+        break;
+    case ResultType::DelaySpread:
+        data = delaySpread();
+        break;
+    case ResultType::RiceFactor:
+        data = riceFactor();
+        break;
+    }
 
     QColor background_color;
 
@@ -305,8 +401,9 @@ void Receiver::paintFlat(QPainter *painter) {
                 background_color);
 }
 
-void Receiver::showResults(int min, int max) {
+void Receiver::showResults(ResultType::ResultType type, int min, int max) {
     // Result type and range
+    m_result_type = type;
     m_res_min = min;
     m_res_max = max;
 
@@ -332,13 +429,32 @@ void Receiver::generateResultsTooltip() {
     // Set the tooltip of the receiver with
     //  - the number of incident rays
     //  - the received power
-    setToolTip(QString("<b><u>Receiver</u></b><br/>"
-                       "<b><i>%1</i></b><br/>"
-                       "<b>Incident rays&nbsp;:</b> %2<br>"
-                       "<b>Power&nbsp;:</b> %3&nbsp;dBm")
-               .arg(m_antenna->getAntennaName())
-               .arg(getRayPaths().size())
-               .arg(SimulationData::convertPowerTodBm(receivedPower()), 0, 'f', 2));
+    //  - the UE SNR
+    //  - the delay spread (if one)
+    //  - the rice factor (if one)
+
+    QString tip_str = QString(
+                "<b><u>Receiver</u></b><br/>"
+                "<b><i>%1</i></b><br/>"
+                "<b>Incident rays:</b> %2<br>"
+                "<b>Power:</b> %3&nbsp;dBm<br>"
+                "<b>UE SNR:</b> %4&nbsp;dB")
+            .arg(m_antenna->getAntennaName())
+            .arg(getRayPaths().size())
+            .arg(SimulationData::convertPowerTodBm(receivedPower()), 0, 'f', 2)
+            .arg(userEndSNR(), 0, 'f', 2);
+
+    double delay_spread = delaySpread();
+    double rice_factor = riceFactor();
+
+    if (!isnan(delay_spread)) {
+        tip_str.append(QString("<br><b>Delay spread: </b>%1&nbsp;s").arg(delay_spread, 0, 'f', 2));
+    }
+    if (!isnan(rice_factor)) {
+        tip_str.append(QString("<br><b>Rice factor: </b>%1").arg(rice_factor, 0, 'f', 2));
+    }
+
+    setToolTip(tip_str);
 }
 
 
@@ -373,11 +489,50 @@ ReceiversArea::~ReceiversArea() {
     deleteReceivers();
 }
 
-QList<Receiver*> ReceiversArea::getReceiversList() {
+void ReceiversArea::getReceivedDataBounds(ResultType::ResultType type, double *min, double *max) const {
+    double val;
+
+    // Initialize max and min to extreme values
+    *min = qInf();
+    *max = -qInf();
+
+    foreach(Receiver *r, m_receivers_list) {
+        switch (type) {
+        case ResultType::Power:
+            val = r->receivedPower();
+            break;
+        case ResultType::SNR:
+            val = r->userEndSNR();
+            break;
+        case ResultType::DelaySpread:
+            val = r->delaySpread();
+            break;
+        case ResultType::RiceFactor:
+            val = r->riceFactor();
+            break;
+        }
+
+        // Ignore non-numeric values
+        if (isnan(val) || isinf(val))
+            continue;
+
+        if (val > *max) {
+            *max = val;
+        }
+        else if (val < *min) {
+            *min = val;
+        }
+    }
+}
+
+QList<Receiver*> ReceiversArea::getReceiversList() const {
     return m_receivers_list;
 }
 
 void ReceiversArea::setArea(AntennaType::AntennaType type, QRectF area) {
+    // Store the given area
+    m_area = area;
+
     // Compute the area as a rect of size multiple of 1m²
     qreal sim_scale = simulationScene()->simulationScale();
 
@@ -400,6 +555,10 @@ void ReceiversArea::setArea(AntennaType::AntennaType type, QRectF area) {
     createReceivers(type, fit_area);
 }
 
+QRectF ReceiversArea::getArea() {
+    return m_area;
+}
+
 void ReceiversArea::createReceivers(AntennaType::AntennaType type, QRectF area) {
     if (!simulationScene())
         return;
@@ -411,19 +570,21 @@ void ReceiversArea::createReceivers(AntennaType::AntennaType type, QRectF area) 
     QPointF init_pos = area.topLeft() + QPointF(RECEIVER_AREA_SIZE/2, RECEIVER_AREA_SIZE/2);
 
     // Add a receiver to each m² on the area
-    for (int x = 0 ; x < num_rcv.width() ; x++) {
-        for (int y = 0 ; y < num_rcv.height() ; y++) {
+    for (int y = 0 ; y < num_rcv.height() ; y++) {
+        for (int x = 0 ; x < num_rcv.width() ; x++) {
             QPointF delta_pos(x * RECEIVER_AREA_SIZE, y * RECEIVER_AREA_SIZE);
             QPointF rcv_pos = init_pos + delta_pos;
 
             bool overlap_building = false;
 
             // Check if this receiver overlaps a building
-            foreach(QGraphicsItem *item, simulationScene()->items(rcv_pos)) {
-                // If the overlapped item is a building -> don't place a receiver
-                if (dynamic_cast<Building*>(item)) {
+            foreach(Building *b, SimulationHandler::simulationData()->getBuildingsList()) {
+                // If the position is overlapped by a building -> don't place a receiver
+                if (b->getRect().contains(rcv_pos)) {
+                    // Go to the end of this building
+                    x = (b->getRect().right() - init_pos.x()) / simulationScene()->simulationScale();
                     overlap_building = true;
-                    break;;
+                    break;
                 }
             }
 
@@ -439,6 +600,9 @@ void ReceiversArea::createReceivers(AntennaType::AntennaType type, QRectF area) 
 
             m_receivers_list.append(rcv);
         }
+
+        // Avoid freezing the UI
+        qApp->processEvents();
     }
 }
 

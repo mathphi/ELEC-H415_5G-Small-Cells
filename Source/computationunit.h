@@ -14,7 +14,7 @@ class ComputationUnit : public QObject, public QRunnable
     Q_OBJECT
 
 public:
-    explicit ComputationUnit(SimulationHandler *h, Receiver *r);
+    explicit ComputationUnit(SimulationHandler *h, QList<Receiver*> r_lst);
 
     bool isRunning();
     void run() override;
@@ -25,7 +25,7 @@ signals:
     void computationFinished();
 
 private:
-    Receiver *m_receiver;
+    QList<Receiver*> m_receivers_list;
     SimulationHandler *m_handler;
     bool m_running;
 };

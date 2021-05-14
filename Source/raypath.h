@@ -18,9 +18,10 @@ public:
     vector<complex> getElectricField() const;
     double getVerticalAngle() const;
 
-    double computePower() const;
+    double computePower();
 
     bool isGround() const;
+    bool isLOS() const;
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -34,6 +35,8 @@ private:
     QList<QLineF> m_rays;
     vector<complex> m_electric_field;
     double m_theta;
+
+    double m_ray_power;
 
     bool m_is_ground;
 };

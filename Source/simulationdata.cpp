@@ -14,13 +14,26 @@
 // Default height for the simulation plane
 #define DEFAULT_SIM_HEIGHT  2.0;    // Meters
 
+// Default simulation parameters
+#define DEFAULT_SIM_BANDWIDTH       200 // MHz
+#define DEFAULT_SIM_TEMPERATURE     20  // °C
+#define DEFAULT_SIM_NOISE_FIGURE    10  // dB
+#define DEFAULT_SIM_TARGET_SNR      2   // dB
+
+
 SimulationData::SimulationData() : QObject()
 {
     m_simulation_type = SimType::PointReceiver;
+
     m_reflections_count = MAX_REFLECTIONS_COUNT_DEFAULT;
     m_nlos_refl_en = false;
-    m_rel_permitivity = DEFAULT_REL_PERMITIVITY;
+
+    m_rel_permitivity   = DEFAULT_REL_PERMITIVITY;
     m_simulation_height = DEFAULT_SIM_HEIGHT;
+    m_sim_bandwidth     = DEFAULT_SIM_BANDWIDTH * 1e6;
+    m_sim_temperature   = convertCelsiusToKelvin(DEFAULT_SIM_TEMPERATURE);
+    m_sim_noise_figure  = DEFAULT_SIM_NOISE_FIGURE;
+    m_sim_target_SNR    = DEFAULT_SIM_TARGET_SNR;
 }
 
 SimulationData::SimulationData(QList<Building*> b_l, QList<Emitter*> e_l, QList<Receiver*> r_l) : SimulationData()
@@ -61,6 +74,28 @@ double SimulationData::convertPowerToWatts(double power_dbm) {
 double SimulationData::convertPowerTodBm(double power_watts) {
     // Compute the power in dBm from the Watts
     return 10 * log10(power_watts / 0.001);
+}
+
+/**
+ * @brief SimulationData::convertKelvinToCelsius
+ * @param T_k
+ * @return
+ *
+ * This function returns the temperature converted to Celsius scale
+ */
+double SimulationData::convertKelvinToCelsius(double T_k) {
+    return T_k - 273.15;
+}
+
+/**
+ * @brief SimulationData::convertCelsiusToKelvin
+ * @param T_c
+ * @return
+ *
+ * This function returns the temperature to absolute in Kelvin
+ */
+double SimulationData::convertCelsiusToKelvin(double T_c) {
+    return T_c + 273.15;
 }
 
 /**
@@ -257,10 +292,10 @@ QList<Emitter*> SimulationData::getEmittersList() {
 QList<Receiver*> SimulationData::getReceiverList() {
     return m_receiver_list;
 }
+
 SimType::SimType SimulationData::simulationType() {
     return m_simulation_type;
 }
-
 void SimulationData::setSimulationType(SimType::SimType t) {
     m_simulation_type = t;
 }
@@ -268,7 +303,6 @@ void SimulationData::setSimulationType(SimType::SimType t) {
 int SimulationData::maxReflectionsCount() const {
     return m_reflections_count;
 }
-
 void SimulationData::setReflectionsCount(int cnt) {
     if (cnt < 0 || cnt > 99) {
         cnt = 3;
@@ -280,7 +314,6 @@ void SimulationData::setReflectionsCount(int cnt) {
 bool SimulationData::reflectionEnabledNLOS() const {
     return m_nlos_refl_en;
 }
-
 void SimulationData::setReflectionEnabledNLOS(bool enabled) {
     m_nlos_refl_en = enabled;
 }
@@ -288,7 +321,6 @@ void SimulationData::setReflectionEnabledNLOS(bool enabled) {
 double SimulationData::getRelPermitivity() const {
     return m_rel_permitivity;
 }
-
 void SimulationData::setRelPermitivity(double perm) {
     m_rel_permitivity = perm;
 }
@@ -296,9 +328,36 @@ void SimulationData::setRelPermitivity(double perm) {
 double SimulationData::getSimulationHeight() const {
     return m_simulation_height;
 }
-
 void SimulationData::setSimulationHeight(double height) {
     m_simulation_height = height;
+}
+
+void SimulationData::setSimulationBandwidth(double bw) {
+    m_sim_bandwidth = bw;
+}
+double SimulationData::getSimulationBandwidth() const {
+    return m_sim_bandwidth;
+}
+
+void SimulationData::setSimulationTemperature(double temp) {
+    m_sim_temperature = temp;
+}
+double SimulationData::getSimulationTemperature() const {
+    return m_sim_temperature;
+}
+
+void SimulationData::setSimulationNoiseFigure(double nf) {
+    m_sim_noise_figure = nf;
+}
+double SimulationData::getSimulationNoiseFigure() const {
+    return m_sim_noise_figure;
+}
+
+void SimulationData::setSimulationTargetSNR(double snr) {
+    m_sim_target_SNR = snr;
+}
+double SimulationData::getSimulationTargetSNR() const {
+    return m_sim_target_SNR;
 }
 
 // ---------------------------------------------------------------------------------------------- //

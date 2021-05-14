@@ -7,6 +7,7 @@
 #include "emitterdialog.h"
 #include "receiverdialog.h"
 #include "buildingdialog.h"
+#include "simsetupdialog.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -82,6 +83,21 @@ MainWindow::MainWindow(QWidget *parent)
         delete ant;
     }
 
+    // Create a button group with result type radio buttons
+    m_result_radio_grp = new QButtonGroup(this);
+    m_result_radio_grp->addButton(ui->radio_result_power, ResultType::Power);
+    m_result_radio_grp->addButton(ui->radio_result_SNR,   ResultType::SNR);
+    m_result_radio_grp->addButton(ui->radio_result_delay, ResultType::DelaySpread);
+    m_result_radio_grp->addButton(ui->radio_result_rice,  ResultType::RiceFactor);
+
+    // Create an action group with map editing actions
+    m_map_edit_act_grp = new QActionGroup(this);
+    m_map_edit_act_grp->addAction(ui->actionAddBuilding);
+    m_map_edit_act_grp->addAction(ui->actionAddEmitter);
+    m_map_edit_act_grp->addAction(ui->actionAddReceiver);
+    m_map_edit_act_grp->addAction(ui->actionEraseObject);
+    m_map_edit_act_grp->addAction(ui->actionEraseAll);
+
     // Initialize simulation area to nullptr
     m_sim_area_item = nullptr;
 
@@ -94,8 +110,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionAddBuilding,      SIGNAL(triggered()),     this, SLOT(addBuilding()));
     connect(ui->actionAddEmitter,       SIGNAL(triggered()),     this, SLOT(addEmitter()));
     connect(ui->actionAddReceiver,      SIGNAL(triggered()),     this, SLOT(addReceiver()));
-    connect(ui->actionEraseObject,      SIGNAL(triggered(bool)), this, SLOT(toggleEraseMode(bool)));
+    connect(ui->actionEraseObject,      SIGNAL(toggled(bool)),   this, SLOT(toggleEraseMode(bool)));
     connect(ui->actionEraseAll,         SIGNAL(triggered()),     this, SLOT(eraseAll()));
+    connect(ui->actionSimulation_setup, SIGNAL(triggered()),     this, SLOT(simulationSetupAction()));
 
     // Window View menu actions
     connect(ui->actionZoomIn,       SIGNAL(triggered()), this, SLOT(actionZoomIn()));
@@ -113,28 +130,28 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->button_simulation,      SIGNAL(clicked()),      this, SLOT(switchSimulationMode()));
 
 
-    /*TODO: implement this
     // Simulation buttons group
-    connect(ui->button_simControl, SIGNAL(clicked()),         this, SLOT(simulationControlAction()));
-    connect(ui->button_simReset,   SIGNAL(clicked()),         this, SLOT(simulationResetAction()));
-    connect(ui->button_editScene,  SIGNAL(clicked()),         this, SLOT(switchEditSceneMode()));
-    connect(ui->button_simExport,  SIGNAL(clicked()),         this, SLOT(exportSimulationAction()));
-    connect(ui->checkbox_rays,     SIGNAL(toggled(bool)),     this, SLOT(raysCheckboxToggled(bool)));
-    connect(ui->slider_threshold,  SIGNAL(valueChanged(int)), this, SLOT(raysThresholdChanged(int)));
-
     connect(ui->combobox_simType,  SIGNAL(currentIndexChanged(int)),
             this, SLOT(simulationTypeChanged()));
     connect(ui->combobox_antennas_type, SIGNAL(currentIndexChanged(int)),
             this, SLOT(receiversAntennaChanged()));
-    connect(ui->spinbox_reflections, SIGNAL(valueChanged(int)),
-            m_simulation_handler->simulationData(), SLOT(setReflectionsCount(int)));
-*/
+
+    connect(ui->button_simSetup,   SIGNAL(clicked()),         this, SLOT(simulationSetupAction()));
+    connect(ui->button_simControl, SIGNAL(clicked()),         this, SLOT(simulationControlAction()));
+    connect(ui->button_simReset,   SIGNAL(clicked()),         this, SLOT(simulationResetAction()));
+    connect(ui->button_editScene,  SIGNAL(clicked()),         this, SLOT(switchEditSceneMode()));
+    connect(ui->button_simExport,  SIGNAL(clicked()),         this, SLOT(exportSimulationAction()));
+
+    connect(ui->checkbox_rays,     SIGNAL(toggled(bool)),     this, SLOT(raysCheckboxToggled(bool)));
+    connect(ui->slider_threshold,  SIGNAL(valueChanged(int)), this, SLOT(raysThresholdChanged(int)));
+
+    connect(m_result_radio_grp, SIGNAL(idToggled(int,bool)),  this, SLOT(resultTypeSelectionChanged(int,bool)));
 
     // Simulation handler signals
-    //connect(m_simulation_handler, SIGNAL(simulationStarted()), this, SLOT(simulationStarted()));
+    connect(m_simulation_handler, SIGNAL(simulationStarted()), this, SLOT(simulationStarted()));
     connect(m_simulation_handler, SIGNAL(simulationFinished()), this, SLOT(simulationFinished()));
-    //connect(m_simulation_handler, SIGNAL(simulationCancelled()), this, SLOT(simulationCancelled()));
-    //connect(m_simulation_handler, SIGNAL(simulationProgress(double)), this, SLOT(simulationProgress(double)));
+    connect(m_simulation_handler, SIGNAL(simulationCancelled()), this, SLOT(simulationCancelled()));
+    connect(m_simulation_handler, SIGNAL(simulationProgress(double)), this, SLOT(simulationProgress(double)));
 
     // Scene events handling
     connect(m_scene, SIGNAL(mouseRightReleased(QGraphicsSceneMouseEvent*)),
@@ -154,9 +171,8 @@ MainWindow::MainWindow(QWidget *parent)
     // Initialize the mouse tracker on the scene
     initMouseTracker();
 
-    //TODO: implement this
     // Update the simulation UI to match the simulation data
-    //updateSimulationUI();
+    updateSimulationUI();
 }
 
 MainWindow::~MainWindow()
@@ -909,7 +925,6 @@ void MainWindow::actionOpen() {
         return;
     }
 
-    /*TODO:
     // Clear all the current data
     simulationReset();
 
@@ -918,7 +933,6 @@ void MainWindow::actionOpen() {
         delete m_sim_area_item;
         m_sim_area_item = nullptr;
     }
-    */
 
     // Clear the scene
     clearAllItems();
@@ -938,7 +952,6 @@ void MainWindow::actionOpen() {
         m_scene->addItem(r);
     }
 
-    /* TODO: implement this
     updateSimulationUI();
     updateSimulationScene();
 
@@ -946,7 +959,6 @@ void MainWindow::actionOpen() {
     if (m_simulation_handler->simulationData()->getEmittersList().size() < 1) {
         switchEditSceneMode();
     }
-    */
 
     // Close the file
     file.close();
@@ -1005,58 +1017,515 @@ void MainWindow::actionZoomBest() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////// PANEL SWITCHING FUNCTIONS /////////////////////////////////////
 
-#include "corner.h"
 
 void MainWindow::switchSimulationMode() {
-    /*
-     * NOTE:
-     * This is a test code...
-     * This has nothing to do with the real action of the corresponding button
-     */
+    if (m_ui_mode == UIMode::SimulationMode)
+        return;
 
+    // Set the current mode to SimulationMode
+    m_ui_mode = UIMode::SimulationMode;
 
-    // Get the simulation bounding rect
+    // Hide the scene edition buttons group
+    ui->group_scene_edition->hide();
+
+    // Show the simulation buttons group
+    ui->group_simulation->show();
+
+    // Disable the map edition actions in menu bar
+    m_map_edit_act_grp->setEnabled(false);
+
+    // Cancel the current drawing (if one)
+    cancelCurrentDrawing();
+
+    // Update the simulation scene and UI according to new mode
+    updateSimulationScene();
+    updateSimulationUI();
+
+    // Update the scene rect (since the view size can have changed)
+    updateSceneRect();
+}
+
+void MainWindow::switchEditSceneMode() {
+    if (m_ui_mode == UIMode::EditorMode)
+        return;
+
+    // This will reset the simulation data if the user accepts
+    if (!askSimulationReset())
+        // Don't continue if user refused
+        return;
+
+    // Set the current mode to EditorMode
+    m_ui_mode = UIMode::EditorMode;
+
+    // Hide the simulation buttons group
+    ui->group_simulation->hide();
+
+    // Show the scene edition buttons group
+    ui->group_scene_edition->show();
+
+    // Enable the map edition actions in menu bar
+    m_map_edit_act_grp->setEnabled(true);
+
+    // Update the simulation scene and UI according to new mode
+    updateSimulationScene();
+    updateSimulationUI();
+
+    // Update the scene rect (since the view size can have changed)
+    updateSceneRect();
+}
+
+void MainWindow::updateSimulationUI() {
+    // Set the current simulation type
+    ui->combobox_simType->setCurrentIndex(m_simulation_handler->simulationData()->simulationType());
+
+    // Show/hide the progress bar
+    ui->progressbar_simulation->setVisible(m_simulation_handler->isRunning());
+
+    // Show/hide widget groups
+    ui->group_show_rays->setVisible(SimulationHandler::simulationData()->simulationType() == SimType::PointReceiver);
+    ui->group_result_type->setVisible(SimulationHandler::simulationData()->simulationType() == SimType::AreaReceiver);
+    ui->group_antenna_type->setVisible(SimulationHandler::simulationData()->simulationType() == SimType::AreaReceiver);
+
+    // Widgets enabling/disabling
+    ui->label_threshold_msg->setEnabled(ui->checkbox_rays->isChecked());
+    ui->label_threshold_val->setEnabled(ui->checkbox_rays->isChecked());
+    ui->slider_threshold->setEnabled(ui->checkbox_rays->isChecked());
+
+    // Enable/disable the UI controls if simulation is running
+    ui->combobox_simType->setDisabled(m_simulation_handler->isRunning());
+    ui->combobox_antennas_type->setDisabled(m_simulation_handler->isRunning());
+    ui->button_simReset->setDisabled(m_simulation_handler->isRunning());
+    ui->button_editScene->setDisabled(m_simulation_handler->isRunning());
+    ui->actionOpen->setDisabled(m_simulation_handler->isRunning());
+    ui->actionSimulation_setup->setDisabled(m_simulation_handler->isRunning());
+
+    // Change the control button text
+    ui->button_simControl->setEnabled(!m_simulation_handler->isCancelling());
+
+    if (m_simulation_handler->isCancelling()) {
+        ui->button_simControl->setText("Canceling...");
+    }
+    else if (m_simulation_handler->isRunning()) {
+        ui->button_simControl->setText("Cancel simulation");
+    }
+    else  {
+        ui->button_simControl->setText("Start simulation");
+    }
+
+    // Update result type buttons
+    updateResultTypeRadios();
+}
+
+void MainWindow::updateSimulationScene() {
+    // Hide receivers only if simulation mode and AreaReceiver simulation type
+    if (m_ui_mode == UIMode::EditorMode) {
+        setPointReceiversVisible(true);
+        deleteSimArea();
+    }
+    else if (m_simulation_handler->simulationData()->simulationType() == SimType::PointReceiver) {
+        setPointReceiversVisible(true);
+        deleteSimArea();
+    }
+    else {
+        setPointReceiversVisible(false);
+        createSimArea();
+    }
+}
+
+void MainWindow::updateResultTypeRadios() {
+    // Disable some result type under certain conditions
+    int em_count = m_simulation_handler->simulationData()->getEmittersList().size();
+
+    // If there are more than one emitter -> no Delay Spread nor Rice Factor
+    if (em_count > 1) {
+        ui->radio_result_delay->setEnabled(false);
+        ui->radio_result_rice->setEnabled(false);
+
+        // Get the currently selected result type
+        ResultType::ResultType res_type = (ResultType::ResultType) m_result_radio_grp->checkedId();
+
+        // Select another radio if the currently checked is unavailable
+        if (res_type == ResultType::DelaySpread ||
+            res_type == ResultType::RiceFactor)
+        {
+            ui->radio_result_power->setChecked(true);
+        }
+    }
+    else {
+        ui->radio_result_delay->setEnabled(true);
+        ui->radio_result_rice->setEnabled(true);
+    }
+}
+
+void MainWindow::setPointReceiversVisible(bool visible) {
+    foreach(Receiver *r, m_simulation_handler->simulationData()->getReceiverList()) {
+        r->setVisible(visible);
+    }
+}
+
+void MainWindow::createSimArea() {
+    // Get the simulation bounding rect and selected antenna type
     QRectF area = m_scene->simulationBoundingRect();
-/*
-    // Get selected antenna type
     AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
 
-    // Create the area rectangle
-    m_sim_area_item = new ReceiversArea();
-    m_scene->addItem((SimulationItem*) m_sim_area_item);
+    if (m_sim_area_item == nullptr) {
+        // Create the area rectangle
+        m_sim_area_item = new ReceiversArea();
+        m_scene->addItem((SimulationItem*) m_sim_area_item);
+    }
+
+    // Re-draw the simulation area
+    // Set the area after the item is added to the scene!
     m_sim_area_item->setArea(type, area);
+}
 
-    qDebug() << "Coverage receiver count:" << m_sim_area_item->getReceiversList().size();
-*/
-    m_simulation_handler->startSimulationComputation(
-                //m_sim_area_item->getReceiversList(),
-                m_simulation_handler->simulationData()->getReceiverList(),
-                area
-            );
+void MainWindow::deleteSimArea() {
+    // Nothing to do if no sim area
+    if (m_sim_area_item == nullptr)
+        return;
 
-/*
-    QPen pen(QBrush(Qt::red), 4);
-    foreach (Wall *w, m_simulation_handler->getWallsList()) {
-        m_scene->addLine(w->getLine(), pen);
+    // Be sure the simulation is resetted
+    simulationReset();
+
+    // Remove the simulation area
+    delete m_sim_area_item;
+    m_sim_area_item = nullptr;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////// SIMULATION PANEL FUNCTIONS /////////////////////////////////////
+
+
+void MainWindow::simulationTypeChanged() {
+    // Get the newly selected simulation type
+    SimType::SimType sim_type = (SimType::SimType) ui->combobox_simType->currentIndex();
+
+    // Actions if the type actually changed
+    if (SimulationHandler::simulationData()->simulationType() != sim_type) {
+        // Ask the user (since this will reset the simulation)
+        int ans = QMessageBox::warning(
+                    this,
+                    "Simulation reset warning",
+                    "Changing the simulation type will reset the current simulation results.\n"
+                    "Are you sure you want to continue?",
+                    QMessageBox::Yes | QMessageBox::No,
+                    QMessageBox::No);
+
+        // Revert the combobox if the answer is Yes
+        if (ans != QMessageBox::Yes) {
+            ui->combobox_simType->setCurrentIndex(SimulationHandler::simulationData()->simulationType());
+            return;
+        }
+
+        // Reset the simulation results
+        simulationReset();
+
+        // Set the new simulation type in simulationData
+        SimulationHandler::simulationData()->setSimulationType(sim_type);
     }
 
-    foreach (Corner *c, m_simulation_handler->getCornersList()) {
-        m_scene->addEllipse(QRectF(c->getPosition() - QPointF(3,3), QSize(6,6)), QPen(Qt::green), QBrush(Qt::green));
-    }
-*/
+    updateSimulationUI();
+    updateSimulationScene();
+}
 
+void MainWindow::receiversAntennaChanged() {
+    // Nothing to do if there is no simulation area item
+    if (m_sim_area_item == nullptr)
+        return;
+
+    // Get the currently selected antenna type
+    AntennaType::AntennaType ant_type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
+
+    // Change the antenna for all receivers in the sim_area_item
+    foreach (Receiver *r, m_sim_area_item->getReceiversList()) {
+        r->setAntenna(ant_type);
+    }
+}
+
+
+void MainWindow::simulationSetupAction() {
+    // Open the setup dialog
+    SimSetupDialog setup_dialog(m_simulation_handler->simulationData());
+    setup_dialog.exec();
+
+    // Note that the setup dialog modifies itself the parameters in simulationData
+}
+
+void MainWindow::simulationControlAction() {
+    // Get the simulation type
+    SimType::SimType sim_type = SimulationHandler::simulationData()->simulationType();
+
+    // Check the minimal requirements for this simulation type
+    if ((sim_type == SimType::AreaReceiver || sim_type == SimType::PointReceiver)
+            && SimulationHandler::simulationData()->getEmittersList().size() < 1)
+    {
+        QMessageBox::critical(
+                    this,
+                    "Simulation error",
+                    "You need to place at least one emitter on the map in order to run this type of simulation");
+
+        return;
+    }
+    else if (sim_type == SimType::PointReceiver
+            && SimulationHandler::simulationData()->getReceiverList().size() < 1)
+    {
+        QMessageBox::critical(
+                    this,
+                    "Simulation error",
+                    "You need to place at least one receiver on the map in order to run this type of simulation");
+
+        return;
+    }
+
+    // If there is no simulation computation currently running
+    if (!m_simulation_handler->isRunning())
+    {
+        // Start the computation for the current simulation type
+        switch (m_simulation_handler->simulationData()->simulationType())
+        {
+        case SimType::PointReceiver: {
+            QRectF area = m_scene->simulationBoundingRect();
+            QList<Receiver*> rcv_list = m_simulation_handler->simulationData()->getReceiverList();
+            m_simulation_handler->startSimulationComputation(rcv_list, area);
+            break;
+        }
+        case SimType::AreaReceiver: {
+            // If there is no simulation area
+            if (m_sim_area_item == nullptr) {
+                // This wouldn't happen
+                return;
+            }
+
+            m_simulation_handler->startSimulationComputation(m_sim_area_item->getReceiversList(), m_sim_area_item->getArea());
+            break;
+        }
+        }
+    }
+    else {
+        // Cancel the current simulation
+        m_simulation_handler->stopSimulationComputation();
+    }
+
+    updateSimulationUI();
+}
+
+void MainWindow::simulationResetAction() {
+    askSimulationReset();
+}
+
+void MainWindow::exportSimulationAction() {
+    // Cancel the (potential) current drawing
+    cancelCurrentDrawing();
+
+    // Open file selection dialog
+    QString file_path = QFileDialog::getSaveFileName(
+                this,
+                "Export simulation result",
+                QDir::homePath(),
+                "JPG (*.jpg);;PNG (*.png);;TIFF (*.tiff)");
+
+    // If the user cancelled the dialog
+    if (file_path.isEmpty()) {
+        return;
+    }
+
+    // Prepare an image with the double resolution of the scene
+    QImage image(ui->graphicsView->sceneRect().size().toSize()*2, QImage::Format_ARGB32);
+
+    // Fill background transparent only if PNG is selected as the destination format
+    if (QFileInfo(file_path).suffix().toLower() == "png") {
+        image.fill(Qt::transparent);
+    }
+    else {
+        image.fill(Qt::white);
+    }
+
+    // Paint the scene into the image
+    QPainter painter(&image);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    m_scene->render(&painter, QRectF(), ui->graphicsView->sceneRect());
+
+    // Write the exported image into the file
+    if (!image.save(file_path)) {
+        QMessageBox::critical(this, "Error", "Unable to write into the selected file");
+        return;
+    }
+}
+
+void MainWindow::raysCheckboxToggled(bool) {
+    // Update the simulation UI
+    updateSimulationUI();
+
+    // Update the rays threshold filtering
+    filterRaysThreshold();
+}
+
+void MainWindow::raysThresholdChanged(int val) {
+    // Set the width of the label to the size of the larger text (-200 dBm)
+    if (ui->label_threshold_val->minimumWidth() == 0) {
+        ui->label_threshold_val->setText("-200 dBm");
+        ui->label_threshold_val->setFixedWidth(ui->label_threshold_val->sizeHint().width());
+    }
+
+    // Set the text of the label according to slider
+    ui->label_threshold_val->setText(QString("%1 dBm").arg(val));
+
+    // Update the rays threshold filtering
+    filterRaysThreshold();
+}
+
+void MainWindow::resultTypeSelectionChanged(int, bool checked) {
+    // Don't care about uncheched events
+    if (!checked)
+        return;
+
+    // Update the view
+    showReceiversResult();
+}
+
+
+void MainWindow::simulationStarted() {
+    // Update the UI controls
+    updateSimulationUI();
 }
 
 void MainWindow::simulationFinished() {
-/*
-    foreach(Receiver *r, m_sim_area_item->getReceiversList()) {
-        r->showResults(-100,-25);
-    }
-*/
+    // Enable the UI controls
+    updateSimulationUI();
 
-    foreach(RayPath *rp, m_simulation_handler->getRayPathsList()) {
-        m_scene->addItem(rp);
+    if (SimulationHandler::simulationData()->simulationType() == SimType::PointReceiver) {
+        // Add all computed rays to the scene
+        foreach (RayPath *rp, m_simulation_handler->getRayPathsList()) {
+            m_scene->addItem(rp);
+        }
     }
 
+    // Show the results
+    showReceiversResult();
+}
+
+void MainWindow::simulationCancelled() {
+    // Update the UI
+    updateSimulationUI();
+
+    // Reset the simulations
+    simulationReset();
+}
+
+void MainWindow::simulationProgress(double p) {
+    // Update the progress bar's value
+    ui->progressbar_simulation->setValue(p * 100);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////// SIMULATION DATA HANDLING FUNCTIONS /////////////////////////////////
+
+
+void MainWindow::simulationReset() {
+    m_simulation_handler->resetComputedData();
+    m_scene->hideDataLegend();
+}
+
+bool MainWindow::askSimulationReset() {
+    int ans = QMessageBox::question(
+                this,
+                "Simulation reset",
+                "Are you sure you want to reset the simulation results?\n"
+                "The map will not be modified.");
+
+    // If the user cancelled the action -> abort
+    if (ans == QMessageBox::No)
+        return false;
+
+    // Reset the computation data
+    simulationReset();
+
+    return true;
+}
+
+void MainWindow::filterRaysThreshold() {
+    // Convert the threshold in Watts
+    const double threshold = SimulationData::convertPowerToWatts(ui->slider_threshold->value());
+
+    // Loop over the RayPaths
+    foreach (RayPath *rp, m_simulation_handler->getRayPathsList())
+    {
+        // Hide the RayPaths with a power lower than the threshold, or checkbox not checked, or
+        // UI is not in simulation mode, or simulation type is area
+        if (rp->computePower() > threshold &&
+                ui->checkbox_rays->isChecked() &&
+                m_ui_mode == UIMode::SimulationMode &&
+                m_simulation_handler->simulationData()->simulationType() == SimType::PointReceiver)
+        {
+            rp->show();
+        }
+        else {
+            rp->hide();
+        }
+    }
+}
+
+void MainWindow::showReceiversResult() {
+    // Don't show the results if not finished
+    if (m_simulation_handler->isRunning())
+        return;
+
+    SimType::SimType sim_type = SimulationHandler::simulationData()->simulationType();
+
+    // Switch over the simulation types
+    switch (sim_type) {
+    case SimType::PointReceiver: {
+        showResultsRays();
+        break;
+    }
+    case SimType::AreaReceiver: {
+        showResultHeatMap();
+        break;
+    }
+    }
+}
+
+void MainWindow::showResultsRays() {
+    // Loop over every receiver and show its results
+    foreach(Receiver *re , SimulationHandler::simulationData()->getReceiverList())
+    {
+        // Show the results of each receiver.
+        // Note: type, min and max are not used for shaped receivers.
+        re->showResults(ResultType::Power, 0, 0);
+    }
+
+    filterRaysThreshold();
+}
+
+void MainWindow::showResultHeatMap() {
+    // No heat map if no simulation area item
+    if (!m_sim_area_item)
+        return;
+
+    // Get the currently selected type
+    ResultType::ResultType res_type = (ResultType::ResultType) m_result_radio_grp->checkedId();
+
+    double min, max;
+    m_sim_area_item->getReceivedDataBounds(res_type, &min, &max);
+
+    // If power -> convert watts to dBm
+    if (res_type == ResultType::Power) {
+        min = SimulationData::convertPowerTodBm(min);
+        max = SimulationData::convertPowerTodBm(max);
+    }
+
+    // Loop over every receiver and show its results
+    foreach(Receiver *re , m_sim_area_item->getReceiversList())
+    {
+        // Show the results of each receiver
+        re->showResults(res_type, min, max);
+    }
+
+    m_scene->showDataLegend(min, max);
 }

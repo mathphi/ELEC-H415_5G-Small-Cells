@@ -17,6 +17,8 @@ RayPath::RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> 
 
     m_is_ground = is_gnd;
 
+    m_ray_power = NAN;
+
     // Under the buildings
     setZValue(500);
 }
@@ -45,6 +47,10 @@ bool RayPath::isGround() const {
     return m_is_ground;
 }
 
+bool RayPath::isLOS() const {
+    return m_rays.size() == 1;
+}
+
 /**
  * @brief RayPath::computePower
  * @return
@@ -53,7 +59,11 @@ bool RayPath::isGround() const {
  * (equation 3.51, applyed to one ray)
  *
  */
-double RayPath::computePower() const {
+double RayPath::computePower() {
+    // Don't recompute if it was previously computed
+    if (!isnan(m_ray_power))
+        return m_ray_power;
+
     // Incidence angle of the ray to the receiver (first ray in the list)
     double phi = m_receiver->getIncidentRayAngle(m_rays.first());
 
@@ -65,7 +75,9 @@ double RayPath::computePower() const {
     vector<complex> he = m_receiver->getEffectiveHeight(m_theta, phi, frequency);
 
     // norm() = square of modulus
-    return norm(dotProduct(he, m_electric_field)) / (8.0 * Ra);
+    m_ray_power = norm(dotProduct(he, m_electric_field)) / (8.0 * Ra);
+
+    return m_ray_power;
 }
 
 

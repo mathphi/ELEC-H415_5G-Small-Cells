@@ -25,7 +25,7 @@ SimulationScene::SimulationScene(QObject *parent) : QGraphicsScene (parent)
  *
  * This function returns the number of pixels per meter
  */
- qreal SimulationScene::simulationScale() {
+qreal SimulationScene::simulationScale() {
     return SIMULATION_SCALE;
 }
 

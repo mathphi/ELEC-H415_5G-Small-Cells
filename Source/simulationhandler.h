@@ -19,10 +19,12 @@ class SimulationHandler : public QObject
 public:
     SimulationHandler();
 
-    SimulationData *simulationData();
+    static SimulationData *simulationData();
+
     QList<RayPath*> getRayPathsList();
 
     bool isRunning();
+    bool isCancelling();
 
     static QPointF mirror(const QPointF source, Wall *wall);
 
@@ -56,7 +58,7 @@ public:
     void computeAllRays();
     void computeReceiverRays(Receiver *r);
 
-    void receiverRaysThreaded(Receiver *r);
+    void receiverRaysThreaded(QList<Receiver*> r_lst);
 
     void startSimulationComputation(QList<Receiver *> rcv_list, QRectF sim_area);
     void stopSimulationComputation();
@@ -72,7 +74,6 @@ private slots:
     void computationUnitFinished();
 
 private:
-    SimulationData *m_simulation_data;
     QList<Receiver*> m_receivers_list;
     QList<Wall*> m_wall_list;
     QList<Corner*> m_corners_list;

@@ -5,16 +5,28 @@
 
 #include <QDebug>
 
+#define AREA_PER_THREAD 100
+
+
+// Global variable for static access to simulation data
+SimulationData *g_simulation_data = new SimulationData();
+
+
 SimulationHandler::SimulationHandler()
 {
-    m_simulation_data = new SimulationData();
     m_sim_started = false;
     m_sim_cancelling = false;
     m_init_cu_count = 0;
 }
 
+/**
+ * @brief SimulationHandler::simulationData
+ * @return
+ *
+ * This function returns a pointer to the simulation data global object
+ */
 SimulationData *SimulationHandler::simulationData() {
-    return m_simulation_data;
+    return g_simulation_data;
 }
 
 /**
@@ -42,6 +54,16 @@ QList<RayPath*> SimulationHandler::getRayPathsList() {
  */
 bool SimulationHandler::isRunning() {
     return m_sim_started;
+}
+
+/**
+ * @brief SimulationHandler::isCancelling
+ * @return
+ *
+ * This function returns true if the simulation is cancelling
+ */
+bool SimulationHandler::isCancelling() {
+    return m_sim_cancelling;
 }
 
 
@@ -569,14 +591,18 @@ void SimulationHandler::computeAllRays() {
     // Start the time counter
     m_computation_timer.start();
 
-    // Loop over the receivers
-    foreach(Receiver *r, m_receivers_list) {
-        // Create a threaded computation unit to compute the rays to this receiver
-        receiverRaysThreaded(r);
-    }
+    // Loop over all receivers
+    for (int i = 0 ; i < m_receivers_list.size() ; ) {
+        QList<Receiver*> rcv_sublist;
 
-    // Call it once (in the case we don't have any computation unit created)
-    computationUnitFinished();
+        // Create a sublist of max. AREA_PER_THREAD receivers
+        for (int j = 0 ; j < AREA_PER_THREAD && i < m_receivers_list.size() ; j++, i++) {
+            rcv_sublist.append(m_receivers_list.at(i));
+        }
+
+        // Create a threaded computation unit to compute the rays to this list if receivers
+        receiverRaysThreaded(rcv_sublist);
+    }
 }
 
 /**
@@ -631,18 +657,24 @@ void SimulationHandler::computeReceiverRays(Receiver *r) {
  * This function creates a computation unit to compute the rays
  * to the receiver r in a thread.
  */
-void SimulationHandler::receiverRaysThreaded(Receiver *r) {
+void SimulationHandler::receiverRaysThreaded(QList<Receiver*> r_lst) {
     // Create a computation unit for the recursive computation of the reflections
-    ComputationUnit *cu = new ComputationUnit(this, r);
-
-    // Add this CU to the list
-    m_computation_units.append(cu);
+    ComputationUnit *cu = new ComputationUnit(this, r_lst);
 
     // Connect the computation unit to the simulation handler
     connect(cu, SIGNAL(computationFinished()), this, SLOT(computationUnitFinished()));
 
+    // Lock this section
+    m_mutex.lock();
+
+    // Add this CU to the list
+    m_computation_units.append(cu);
+
     // Add this computation unit to the queue of the thread pool
     m_threadpool.start(cu);
+
+    // Unlock this section
+    m_mutex.unlock();
 
     // Increase the computation units counter
     m_init_cu_count++;
@@ -661,11 +693,11 @@ void SimulationHandler::computationUnitFinished() {
     if (cu != nullptr) {
         // One thread can write in this list at a time (mutex)
         m_mutex.lock();
-        m_computation_units.removeOne(cu);
+        m_computation_units.removeAll(cu);
         m_mutex.unlock();
 
         // Delete this computation unit
-        cu->deleteLater();
+        delete cu;
     }
 
     // Compute the progression and send the progression signal
@@ -673,25 +705,34 @@ void SimulationHandler::computationUnitFinished() {
     emit simulationProgress(progress);
 
     // All computations done
-    if (m_computation_units.size() == 0){
-        qDebug() << "Time (ms):" << m_computation_timer.nsecsElapsed() / 1e6;
-        qDebug() << "Count:" << getRayPathsList().size();
-        qDebug() << "Receivers:" << m_receivers_list.size();
-        qDebug() << "Walls:" << m_wall_list.size();
-
+    if (m_computation_units.size() == 0) {
         // Mark the simulation as stopped
         m_sim_started = false;
 
         if (!m_sim_cancelling) {
+            qDebug() << "Time (ms):" << m_computation_timer.nsecsElapsed() / 1e6;
+            qDebug() << "Count:" << getRayPathsList().size();
+            qDebug() << "Receivers:" << m_receivers_list.size();
+            qDebug() << "Walls:" << m_wall_list.size();
+
             // Emit the simulation finished signal
             emit simulationFinished();
         }
         else {
-            // Reset the cancelling flag
-            m_sim_cancelling = false;
+            // Lock this section
+            m_mutex.lock();
 
-            // Emit the simulation cancelled signal
-            emit simulationCancelled();
+            // If this is the lastest cancelling thread
+            if (m_threadpool.activeThreadCount() <= 1) {
+                // Reset the cancelling flag
+                m_sim_cancelling = false;
+
+                // Emit the simulation cancelled signal
+                emit simulationCancelled();
+            }
+
+            // Unlock this section
+            m_mutex.unlock();
         }
     }
 }
@@ -734,8 +775,6 @@ void SimulationHandler::startSimulationComputation(QList<Receiver*> rcv_list, QR
     emit simulationStarted();
     emit simulationProgress(0);
 
-    qDebug() << "Started";
-
     // Compute all rays
     computeAllRays();
 }
@@ -747,6 +786,9 @@ void SimulationHandler::startSimulationComputation(QList<Receiver*> rcv_list, QR
  * The cancel operation must wait for all threads to finish.
  */
 void SimulationHandler::stopSimulationComputation() {
+    // Lock this whole function to ensure thread management integrity
+    m_mutex.lock();
+
     // Clear the queue of the thread pool
     m_threadpool.clear();
 
@@ -757,12 +799,15 @@ void SimulationHandler::stopSimulationComputation() {
     foreach(ComputationUnit *cu, m_computation_units) {
         if (!cu->isRunning()) {
             // Remove the CU from the list
-            m_computation_units.removeOne(cu);
+            m_computation_units.removeAll(cu);
 
             // Delete this CU
-            cu->deleteLater();
+            delete cu;
         }
     }
+
+    // Lock access to the list
+    m_mutex.unlock();
 }
 
 /**

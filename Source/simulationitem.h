@@ -4,6 +4,7 @@
 #include <QGraphicsItem>
 
 class SimulationScene;
+class SimulationData;
 
 class SimulationItem : public QGraphicsItem
 {
