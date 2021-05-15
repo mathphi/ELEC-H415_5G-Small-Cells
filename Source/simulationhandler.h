@@ -23,6 +23,7 @@ public:
 
     QList<RayPath*> getRayPathsList();
 
+    bool isDone();
     bool isRunning();
     bool isCancelling();
 
@@ -85,8 +86,10 @@ private:
     QMutex m_mutex;
 
     int m_init_cu_count;
-    int m_sim_started;
-    int m_sim_cancelling;
+    bool m_sim_started;
+    bool m_sim_cancelling;
+    bool m_sim_done;
+
     QRectF m_sim_area;
 };
 

@@ -17,23 +17,57 @@ DataLegendItem::DataLegendItem() : QGraphicsItem()
     // This item is above all others
     setZValue(9999999);
 
-    m_data_min = 0;
-    m_data_max = 0;
-
     // Default content
-    setDataRange(-100, 0);
+    setDataRange(ResultType::Power, -100, 0);
 }
 
-void DataLegendItem::setDataRange(double min, double max) {
+void DataLegendItem::setDataRange(ResultType::ResultType type, double min, double max) {
+    m_result_type = type;
+
+    double mid = (max+min)/2;
+
+    // Prepare the data strings
+    QString units_max, units_min, units_mid;
+
+    switch (type) {
+    case ResultType::Power: {
+        units_min = "dBm";
+        units_mid = "dBm";
+        units_max = "dBm";
+        min = SimulationData::convertPowerTodBm(min);
+        max = SimulationData::convertPowerTodBm(max);
+
+        // Recompute the mid-value in dBm
+        mid = (max+min)/2;
+        break;
+    }
+    case ResultType::SNR:
+    case ResultType::RiceFactor: {
+        units_min = "dB";
+        units_mid = "dB";
+        units_max = "dB";
+        break;
+    }
+    case ResultType::DelaySpread: {
+        min = SimulationData::delayToHumanReadable(min, &units_min);
+        mid = SimulationData::delayToHumanReadable(mid, &units_mid);
+        max = SimulationData::delayToHumanReadable(max, &units_max);
+        break;
+    }
+    }
+
+    // Round the results
+    min = floor(min);
+    mid = round(mid);
+    max = ceil(max);
+
+    // Store min and max
     m_data_min = min;
     m_data_max = max;
 
-    // Prepare the data strings
-    QString units = "dBm";
-
-    m_data_start_str = QString("%1 %2").arg(max, 0, 'f', 0).arg(units);
-    m_data_mid_str = QString("%1 %2").arg((max+min)/2, 0, 'f', 0).arg(units);
-    m_data_end_str = QString("%1 %2").arg(min, 0, 'f', 0).arg(units);
+    m_data_start_str = QString("%1 %2").arg(max, 0, 'f', 0).arg(units_max);
+    m_data_mid_str = QString("%1 %2").arg(mid, 0, 'f', 0).arg(units_mid);
+    m_data_end_str = QString("%1 %2").arg(min, 0, 'f', 0).arg(units_min);
 
     prepareGeometryChange();
     update();

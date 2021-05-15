@@ -10,13 +10,22 @@ class Receiver;
 class RayPath : public SimulationItem
 {
 public:
-    RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> En, double theta = M_PI_2, bool is_gnd = false);
+    RayPath(Emitter *em,
+            Receiver *rv,
+            QList<QLineF> rays,
+            vector<complex> En,
+            double dn,
+            double theta = M_PI_2,
+            bool is_gnd = false);
 
     Emitter *getEmitter() const;
     Receiver *getReceiver() const;
     QList<QLineF> getRays() const;
     vector<complex> getElectricField() const;
     double getVerticalAngle() const;
+    double getTotalLength() const;
+    double getDelay() const;
+    double getAmplitude();
 
     double computePower();
 
@@ -35,6 +44,7 @@ private:
     QList<QLineF> m_rays;
     vector<complex> m_electric_field;
     double m_theta;
+    double m_totat_length;
 
     double m_ray_power;
 

@@ -31,6 +31,7 @@ public:
     static double convertPowerTodBm(double power_watts);
     static double convertKelvinToCelsius(double T_k);
     static double convertCelsiusToKelvin(double T_c);
+    static double delayToHumanReadable(double delay, QString *units);
 
     static QRgb ratioToColor(qreal ratio, bool light = false);
 
@@ -61,6 +62,7 @@ public:
     double getSimulationTemperature() const;
     double getSimulationNoiseFigure() const;
     double getSimulationTargetSNR() const;
+    double getMinimumValidRadius() const;
     double computeThermalNoise() const;
 
     int maxReflectionsCount() const;
@@ -74,6 +76,7 @@ public slots:
     void setSimulationTemperature(double temp);
     void setSimulationNoiseFigure(double nf);
     void setSimulationTargetSNR(double snr);
+    void setMinimumValidRadius(double radius);
 
     void setSimulationHeight(double height);
     void setReflectionsCount(int cnt);
@@ -92,6 +95,7 @@ private:
     double m_sim_temperature;
     double m_sim_noise_figure;
     double m_sim_target_SNR;
+    double m_min_valid_radius;
 
 
     // Simulation settings

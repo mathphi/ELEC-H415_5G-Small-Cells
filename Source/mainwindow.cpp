@@ -1473,7 +1473,7 @@ void MainWindow::filterRaysThreshold() {
 
 void MainWindow::showReceiversResult() {
     // Don't show the results if not finished
-    if (m_simulation_handler->isRunning())
+    if (m_simulation_handler->isRunning() || !m_simulation_handler->isDone())
         return;
 
     SimType::SimType sim_type = SimulationHandler::simulationData()->simulationType();
@@ -1514,12 +1514,6 @@ void MainWindow::showResultHeatMap() {
     double min, max;
     m_sim_area_item->getReceivedDataBounds(res_type, &min, &max);
 
-    // If power -> convert watts to dBm
-    if (res_type == ResultType::Power) {
-        min = SimulationData::convertPowerTodBm(min);
-        max = SimulationData::convertPowerTodBm(max);
-    }
-
     // Loop over every receiver and show its results
     foreach(Receiver *re , m_sim_area_item->getReceiversList())
     {
@@ -1527,5 +1521,5 @@ void MainWindow::showResultHeatMap() {
         re->showResults(res_type, min, max);
     }
 
-    m_scene->showDataLegend(min, max);
+    m_scene->showDataLegend(res_type, min, max);
 }

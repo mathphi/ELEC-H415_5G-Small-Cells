@@ -47,6 +47,16 @@ QList<RayPath*> SimulationHandler::getRayPathsList() {
 }
 
 /**
+ * @brief SimulationHandler::isDone
+ * @return
+ *
+ * This function returns true if a simulation result has been computed
+ */
+bool SimulationHandler::isDone() {
+    return m_sim_done;
+}
+
+/**
  * @brief SimulationHandler::isRunning
  * @return
  *
@@ -348,7 +358,7 @@ RayPath *SimulationHandler::computeRayPath(
     vector<complex> En = coeff * computeNominalElecField(emitter, rays.last(), rays.first(), dn);
 
     // Return a new RayPath object
-    RayPath *rp = new RayPath(emitter, receiver, rays, En);
+    RayPath *rp = new RayPath(emitter, receiver, rays, En, dn);
     return rp;
 }
 
@@ -517,7 +527,7 @@ void SimulationHandler::computeDiffraction(Emitter *e, Receiver *r, Corner *c) {
     QList<QLineF> rays = QList<QLineF>() << ce_ray << cr_ray;
 
     // Add the new RayPath object to the receiver
-    RayPath *rp = new RayPath(e, r, rays, En);
+    RayPath *rp = new RayPath(e, r, rays, En, dn);
     r->addRayPath(rp);
 }
 
@@ -572,7 +582,7 @@ void SimulationHandler::computeGroundReflection(Emitter *e, Receiver *r) {
     QList<QLineF> rays = QList<QLineF>() << los_ray;
 
     // Add the new RayPath object to the receiver
-    RayPath *rp = new RayPath(e, r, rays, En, theta_er, true);
+    RayPath *rp = new RayPath(e, r, rays, En, dn, theta_er, true);
     r->addRayPath(rp);
 }
 
@@ -618,11 +628,17 @@ void SimulationHandler::computeReceiverRays(Receiver *r) {
         // Compute the direct ray path
         RayPath *LOS = computeRayPath(e, r);
 
+        // Ignore this receiver if the distance to the receiver is lower than the minimum
+        if (LOS != nullptr && LOS->getTotalLength() < simulationData()->getMinimumValidRadius()) {
+            delete LOS;
+            continue;
+        }
+
         // Add it to his receiver
         r->addRayPath(LOS);
 
         // Compute reflection off the ground only if LOS (else it will cross a wall)
-        if (LOS != nullptr) {
+        if (LOS != nullptr && simulationData()->maxReflectionsCount() > 0) {
             computeGroundReflection(e, r);
         }
 
@@ -714,6 +730,9 @@ void SimulationHandler::computationUnitFinished() {
             qDebug() << "Count:" << getRayPathsList().size();
             qDebug() << "Receivers:" << m_receivers_list.size();
             qDebug() << "Walls:" << m_wall_list.size();
+
+            // Set simulation done flag
+            m_sim_done = true;
 
             // Emit the simulation finished signal
             emit simulationFinished();
@@ -816,6 +835,9 @@ void SimulationHandler::stopSimulationComputation() {
  * This function erases the computation results and computed RayPaths
  */
 void SimulationHandler::resetComputedData() {
+    // Reset simulation done flag
+    m_sim_done = false;
+
     // Reset each receiver
     foreach(Receiver *r, m_receivers_list) {
         r->reset();

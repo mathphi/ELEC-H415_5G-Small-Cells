@@ -58,7 +58,7 @@ public:
     double delaySpread();
     double riceFactor();
 
-    void showResults(ResultType::ResultType type, int min, int max);
+    void showResults(ResultType::ResultType type, double min, double max);
 
     void generateIdleTooltip();
     void generateResultsTooltip();
@@ -75,8 +75,8 @@ private:
     double m_rice_factor;
 
     ResultType::ResultType m_result_type;
-    int m_res_min;
-    int m_res_max;
+    double m_res_min;
+    double m_res_max;
 
     bool m_flat;
     bool m_show_result;

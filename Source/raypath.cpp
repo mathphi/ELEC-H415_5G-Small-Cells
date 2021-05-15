@@ -6,7 +6,14 @@
 
 #define PEN_WIDTH 1
 
-RayPath::RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> En, double theta, bool is_gnd)
+RayPath::RayPath(
+        Emitter *em,
+        Receiver *rv,
+        QList<QLineF> rays,
+        vector<complex> En,
+        double dn,
+        double theta,
+        bool is_gnd)
     : SimulationItem()
 {
     m_emitter = em;
@@ -14,6 +21,7 @@ RayPath::RayPath(Emitter *em, Receiver *rv, QList<QLineF> rays, vector<complex> 
     m_rays = rays;
     m_electric_field = En;
     m_theta = theta;
+    m_totat_length = dn;
 
     m_is_ground = is_gnd;
 
@@ -43,12 +51,24 @@ double RayPath::getVerticalAngle() const {
     return m_theta;
 }
 
+double RayPath::getTotalLength() const {
+    return m_totat_length;
+}
+
+double RayPath::getDelay() const {
+    return m_totat_length / LIGHT_SPEED;
+}
+
+double RayPath::getAmplitude() {
+    return sqrt(computePower() / m_emitter->getPower());
+}
+
 bool RayPath::isGround() const {
     return m_is_ground;
 }
 
 bool RayPath::isLOS() const {
-    return m_rays.size() == 1;
+    return m_rays.size() == 1 && !m_is_ground;
 }
 
 /**

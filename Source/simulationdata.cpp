@@ -14,6 +14,9 @@
 // Default height for the simulation plane
 #define DEFAULT_SIM_HEIGHT  2.0;    // Meters
 
+// Default minimum validity radius
+#define DEFAULT_VALID_RADIUS 10.0   // Meters
+
 // Default simulation parameters
 #define DEFAULT_SIM_BANDWIDTH       200 // MHz
 #define DEFAULT_SIM_TEMPERATURE     20  // °C
@@ -34,6 +37,7 @@ SimulationData::SimulationData() : QObject()
     m_sim_temperature   = convertCelsiusToKelvin(DEFAULT_SIM_TEMPERATURE);
     m_sim_noise_figure  = DEFAULT_SIM_NOISE_FIGURE;
     m_sim_target_SNR    = DEFAULT_SIM_TARGET_SNR;
+    m_min_valid_radius  = DEFAULT_VALID_RADIUS;
 }
 
 SimulationData::SimulationData(QList<Building*> b_l, QList<Emitter*> e_l, QList<Receiver*> r_l) : SimulationData()
@@ -96,6 +100,41 @@ double SimulationData::convertKelvinToCelsius(double T_k) {
  */
 double SimulationData::convertCelsiusToKelvin(double T_c) {
     return T_c + 273.15;
+}
+
+/**
+ * @brief SimulationData::delayToHumanReadable
+ * @param delay
+ * @param units
+ * @return
+ *
+ * This function converts a delay in seconds to a human readable delay
+ */
+double SimulationData::delayToHumanReadable(double delay, QString *units) {
+    double hr_delay;
+
+    if (delay < 1e-9) {
+        *units = "ps";
+        hr_delay = delay / 1e-12;
+    }
+    else if (delay < 1e-6) {
+        *units = "ns";
+        hr_delay = delay / 1e-9;
+    }
+    else if (delay < 1e-3) {
+        *units = "µs";
+        hr_delay = delay / 1e-6;
+    }
+    else if (delay < 1e-0) {
+        *units = "ms";
+        hr_delay = delay / 1e-3;
+    }
+    else {
+        *units = "s";
+        hr_delay = delay;
+    }
+
+    return hr_delay;
 }
 
 /**
@@ -358,6 +397,13 @@ void SimulationData::setSimulationTargetSNR(double snr) {
 }
 double SimulationData::getSimulationTargetSNR() const {
     return m_sim_target_SNR;
+}
+
+void SimulationData::setMinimumValidRadius(double radius) {
+    m_min_valid_radius = radius;
+}
+double SimulationData::getMinimumValidRadius() const {
+    return m_min_valid_radius;
 }
 
 // ---------------------------------------------------------------------------------------------- //

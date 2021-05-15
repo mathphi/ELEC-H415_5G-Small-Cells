@@ -259,15 +259,37 @@ double Receiver::userEndSNR() {
  * @brief Receiver::delaySpread
  * @return
  *
- * This function computes the delay spread.
+ * This function computes the delay spread (Equation (1.24)).
  * The delay spread is defined if there is only one emitter in the simulation.
  */
 double Receiver::delaySpread() {
-    if (SimulationHandler::simulationData()->getEmittersList().size() != 1) {
+    // No delay spread if more than one emitter or if less than two rays
+    if (SimulationHandler::simulationData()->getEmittersList().size() != 1 ||
+            m_received_rays.size() < 2) {
         return NAN;
     }
 
-    // Equation (1.24) & 1.2.3 exercises report
+    // Re-use the previously computed value
+    if (!isnan(m_delay_spread))
+        return m_delay_spread;
+
+    double delay_i, delay_j;
+    double max_delay = 0;
+
+    // Loop over each pair of rays
+    for (int i = 0 ; i < m_received_rays.size() ; i++) {
+        for (int j = i+1 ; j < m_received_rays.size() ; j++) {
+            // Get the transmission delay of the two rays
+            delay_i = m_received_rays.at(i)->getDelay();
+            delay_j = m_received_rays.at(j)->getDelay();
+
+            // Keep the maximal delay difference
+            max_delay = max(max_delay, abs(delay_i - delay_j));
+        }
+    }
+
+    // Store the computed delay spread for future usage
+    m_delay_spread = max_delay;
 
     return m_delay_spread;
 }
@@ -276,15 +298,36 @@ double Receiver::delaySpread() {
  * @brief Receiver::riceFactor
  * @return
  *
- * This function computes the rice factor.
+ * This function computes the rice factor (Equation (4.18)).
  * The rice factor is defined if there is only one emitter in the simulation.
  */
 double Receiver::riceFactor() {
-    if (SimulationHandler::simulationData()->getEmittersList().size() != 1) {
+    // No rice factor if more than one emitter or if less than two rays
+    if (SimulationHandler::simulationData()->getEmittersList().size() != 1 ||
+            m_received_rays.size() < 2) {
         return NAN;
     }
 
-    // Equation (4.18)
+    // Re-use the previously computed value
+    if (!isnan(m_rice_factor))
+        return m_rice_factor;
+
+    // Initialize to 0
+    double los_val_sq = 0;
+    double sum_ampl_sq = 0;
+
+    foreach(RayPath *rp, m_received_rays) {
+        // One of them may be a LOS
+        if (rp->isLOS()) {
+            los_val_sq = pow(rp->getAmplitude(), 2);
+        }
+        else {
+            sum_ampl_sq += pow(rp->getAmplitude(), 2);
+        }
+    }
+
+    // Rice factor in dB
+    m_rice_factor = 10*log10(los_val_sq/sum_ampl_sq);
 
     return m_rice_factor;
 }
@@ -385,7 +428,7 @@ void Receiver::paintFlat(QPainter *painter) {
     QColor background_color;
 
     if (data != 0 && !isinf(data) && !isnan(data)) {
-        double data_ratio = (data - m_res_min) / (double)(m_res_max - m_res_min);
+        double data_ratio = (data - m_res_min) / (m_res_max - m_res_min);
 
         // Use the light color profile
         background_color = SimulationData::ratioToColor(data_ratio, true);
@@ -401,9 +444,27 @@ void Receiver::paintFlat(QPainter *painter) {
                 background_color);
 }
 
-void Receiver::showResults(ResultType::ResultType type, int min, int max) {
-    // Result type and range
+void Receiver::showResults(ResultType::ResultType type, double min, double max) {
+    // Result type
     m_result_type = type;
+
+    // If result is power -> convert watts to dBm
+    switch (type) {
+    case ResultType::Power: {
+        min = floor(SimulationData::convertPowerTodBm(min));
+        max = ceil(SimulationData::convertPowerTodBm(max));
+        break;
+    }
+    case ResultType::SNR: {
+        min = floor(min);
+        max = ceil(max);
+        break;
+    }
+    default:
+        break;
+    }
+
+    // Store the data range
     m_res_min = min;
     m_res_max = max;
 
@@ -448,10 +509,12 @@ void Receiver::generateResultsTooltip() {
     double rice_factor = riceFactor();
 
     if (!isnan(delay_spread)) {
-        tip_str.append(QString("<br><b>Delay spread: </b>%1&nbsp;s").arg(delay_spread, 0, 'f', 2));
+        QString units;
+        double hr_ds = SimulationData::delayToHumanReadable(delaySpread(), &units);
+        tip_str.append(QString("<br><b>Delay spread: </b>%1&nbsp;%2").arg(hr_ds, 0, 'f', 2).arg(units));
     }
     if (!isnan(rice_factor)) {
-        tip_str.append(QString("<br><b>Rice factor: </b>%1").arg(rice_factor, 0, 'f', 2));
+        tip_str.append(QString("<br><b>Rice factor: </b>%1&nbsp;dB").arg(rice_factor, 0, 'f', 2));
     }
 
     setToolTip(tip_str);
@@ -500,6 +563,11 @@ void ReceiversArea::getReceivedDataBounds(ResultType::ResultType type, double *m
         switch (type) {
         case ResultType::Power:
             val = r->receivedPower();
+
+            // Ignore zero-powers
+            if (val == 0)
+                continue;
+
             break;
         case ResultType::SNR:
             val = r->userEndSNR();
