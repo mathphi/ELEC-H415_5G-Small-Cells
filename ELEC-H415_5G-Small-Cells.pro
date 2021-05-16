@@ -20,6 +20,7 @@ SOURCES += \
     Source/datalegenditem.cpp \
     Source/emitter.cpp \
     Source/emitterdialog.cpp \
+    Source/impulsedialog.cpp \
     Source/main.cpp \
     Source/mainwindow.cpp \
     Source/raypath.cpp \
@@ -45,6 +46,7 @@ HEADERS += \
     Source/datalegenditem.h \
     Source/emitter.h \
     Source/emitterdialog.h \
+    Source/impulsedialog.h \
     Source/mainwindow.h \
     Source/raypath.h \
     Source/receiver.h \
@@ -61,6 +63,7 @@ FORMS += \
     Source/analysisdialog.ui \
     Source/buildingdialog.ui \
     Source/emitterdialog.ui \
+    Source/impulsedialog.ui \
     Source/mainwindow.ui \
     Source/receiverdialog.ui \
     Source/simsetupdialog.ui

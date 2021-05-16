@@ -2,14 +2,18 @@
 #include "ui_analysisdialog.h"
 
 #include "simulationhandler.h"
+#include "mainwindow.h"
 
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
+#include <QtCharts/QLogValueAxis>
+#include <QFileDialog>
+#include <QMessageBox>
 
 #include <QDebug>
 
-using namespace QtCharts;
+QT_CHARTS_USE_NAMESPACE
 
 
 AnalysisDialog::AnalysisDialog(QList<Receiver *> rcv_list, QWidget *parent) :
@@ -20,9 +24,11 @@ AnalysisDialog::AnalysisDialog(QList<Receiver *> rcv_list, QWidget *parent) :
 
     // Remove the help button
     setWindowFlag(Qt::WindowContextHelpButtonHint, false);
+    setWindowFlag(Qt::WindowMaximizeButtonHint, true);
 
     // Antialiasing on plots
-    ui->chartView->setRenderHint(QPainter::Antialiasing);
+    ui->chartView->setRenderHint(QPainter::Antialiasing, true);
+    ui->chartView->setRenderHint(QPainter::TextAntialiasing, true);
 
     // Store the receivers list
     // This list is ordered from 0 meter
@@ -48,13 +54,31 @@ AnalysisDialog::AnalysisDialog(QList<Receiver *> rcv_list, QWidget *parent) :
 
 AnalysisDialog::~AnalysisDialog()
 {
-    delete ui;
     delete m_power_plot;
     delete m_snr_plot;
     delete m_delay_plot;
     delete m_rice_plot;
+    delete ui;
 }
 
+QLogValueAxis *AnalysisDialog::createDistanceAxis() {
+    QLogValueAxis *axis = new QLogValueAxis();
+    axis->setTitleText("Distance [m]");
+    axis->setLabelFormat("%.1f");
+    axis->setBase(10.0);
+    axis->setMinorTickCount(10);
+
+    return axis;
+}
+
+QValueAxis *AnalysisDialog::createValueAxis(QString axis_name) {
+    QValueAxis *axis = new QValueAxis();
+    axis->setTitleText(axis_name);
+    axis->setLabelFormat("%.1f");
+    axis->setTickCount(-1);
+
+    return axis;
+}
 
 void AnalysisDialog::preparePlotsData() {
     // Generate the plots
@@ -64,16 +88,15 @@ void AnalysisDialog::preparePlotsData() {
     QLineSeries *rice_series    = new QLineSeries();
 
     // Temporary variables for the loop
-    double d, logd;
+    double d;
     double power_val, snr_val, delay_val, rice_val;
 
-    for (int i = 0 ; i < m_receivers_list.size() ; i++) {
+    for (int i = 1 ; i < m_receivers_list.size() ; i++) {
         // Pointer to the receiver at distance d
         Receiver *r = m_receivers_list.at(i);
 
-        // Compute the distance (starts at 1m)
-        d = (i+1);
-        logd = log10(d);
+        // Compute the distance (starts at 0m)
+        d = i;
 
         // Get and parse the corresponding values
         power_val   = SimulationData::convertPowerTodBm(r->receivedPower());
@@ -83,19 +106,19 @@ void AnalysisDialog::preparePlotsData() {
 
         if (!isnan(power_val) && !isinf(power_val)) {
             // Append this data to the plot
-            *power_series << QPointF(logd, power_val);
+            *power_series << QPointF(d, power_val);
         }
         if (!isnan(snr_val) && !isinf(snr_val)) {
             // Append this data to the plot
-            *snr_series << QPointF(logd, snr_val);
+            *snr_series << QPointF(d, snr_val);
         }
         if (!isnan(delay_val) && !isinf(delay_val)) {
             // Append this data to the plot
-            *delay_series << QPointF(logd, delay_val);
+            *delay_series << QPointF(d, delay_val);
         }
         if (!isnan(rice_val) && !isinf(rice_val)) {
             // Append this data to the plot
-            *rice_series << QPointF(logd, rice_val);
+            *rice_series << QPointF(d, rice_val);
         }
     }
 
@@ -107,28 +130,64 @@ void AnalysisDialog::preparePlotsData() {
 
     // Hide legend
     m_power_plot->legend()->hide();
-    m_snr_plot->legend()->hide();
+    m_snr_plot  ->legend()->hide();
     m_delay_plot->legend()->hide();
-    m_rice_plot->legend()->hide();
+    m_rice_plot ->legend()->hide();
 
     // Add prepared data to plots
     m_power_plot->addSeries(power_series);
-    m_snr_plot->addSeries(snr_series);
+    m_snr_plot  ->addSeries(snr_series);
     m_delay_plot->addSeries(delay_series);
-    m_rice_plot->addSeries(rice_series);
+    m_rice_plot ->addSeries(rice_series);
 
-    m_power_plot->createDefaultAxes();
-    m_snr_plot->createDefaultAxes();
-    m_delay_plot->createDefaultAxes();
-    m_rice_plot->createDefaultAxes();
+    QLogValueAxis *power_axisX  = createDistanceAxis();
+    QLogValueAxis *snr_axisX    = createDistanceAxis();
+    QLogValueAxis *delay_axisX  = createDistanceAxis();
+    QLogValueAxis *rice_axisX   = createDistanceAxis();
 
-    m_power_plot->axes(Qt::Horizontal).first()->setTitleText("Distance log(d)");
+    m_power_plot->addAxis(power_axisX,  Qt::AlignBottom);
+    m_snr_plot  ->addAxis(snr_axisX,    Qt::AlignBottom);
+    m_delay_plot->addAxis(delay_axisX,  Qt::AlignBottom);
+    m_rice_plot ->addAxis(rice_axisX,   Qt::AlignBottom);
 
+    power_series->attachAxis(power_axisX);
+    snr_series  ->attachAxis(snr_axisX);
+    delay_series->attachAxis(delay_axisX);
+    rice_series ->attachAxis(rice_axisX);
+
+    QValueAxis *power_axisY = createValueAxis("Received power [dBm]");
+    QValueAxis *snr_axisY   = createValueAxis("SNE at UE [dB]");
+    QValueAxis *delay_axisY = createValueAxis("Delay spread [s]");
+    QValueAxis *rice_axisY  = createValueAxis("Rice factor [dB]");
+
+    m_power_plot->addAxis(power_axisY,  Qt::AlignLeft);
+    m_snr_plot  ->addAxis(snr_axisY,    Qt::AlignLeft);
+    m_delay_plot->addAxis(delay_axisY,  Qt::AlignLeft);
+    m_rice_plot ->addAxis(rice_axisY,   Qt::AlignLeft);
+
+    power_series->attachAxis(power_axisY);
+    snr_series  ->attachAxis(snr_axisY);
+    delay_series->attachAxis(delay_axisY);
+    rice_series ->attachAxis(rice_axisY);
+
+    power_axisY->applyNiceNumbers();
+    snr_axisY  ->applyNiceNumbers();
+    delay_axisY->applyNiceNumbers();
+    rice_axisY ->applyNiceNumbers();
 
     m_power_plot->setTitle("Received power as a function of the distance");
     m_snr_plot  ->setTitle("SNR as a function of the distance");
     m_delay_plot->setTitle("Delay spread as a function of the distance");
     m_rice_plot ->setTitle("Rice factor as a function of the distance");
+
+    // Set title font (large and bold)
+    QFont font = m_power_plot->titleFont();
+    font.setBold(true);
+    font.setPointSizeF(11.0);
+    m_power_plot->setTitleFont(font);
+    m_snr_plot  ->setTitleFont(font);
+    m_delay_plot->setTitleFont(font);
+    m_rice_plot ->setTitleFont(font);
 }
 
 void AnalysisDialog::selectedTypeChanged() {
@@ -156,5 +215,40 @@ void AnalysisDialog::selectedTypeChanged() {
 
 
 void AnalysisDialog::exportCurrentPlot() {
+    // Open file selection dialog
+    QString file_path = QFileDialog::getSaveFileName(
+                this,
+                "Export impulse response plot",
+                MainWindow::lastUsedDirectory().path(),
+                "JPG (*.jpg);;PNG (*.png);;TIFF (*.tiff)");
 
+    // If the user cancelled the dialog
+    if (file_path.isEmpty()) {
+        return;
+    }
+
+    // Set the last used directory
+    MainWindow::setLastUsedDirectory(file_path);
+
+    // Prepare an image with the double resolution of the scene
+    QImage image(ui->chartView->sceneRect().size().toSize()*4, QImage::Format_ARGB32);
+
+    // Fill background transparent only if PNG is selected as the destination format
+    if (QFileInfo(file_path).suffix().toLower() == "png") {
+        image.fill(Qt::transparent);
+    }
+    else {
+        image.fill(Qt::white);
+    }
+
+    // Paint the scene into the image
+    QPainter painter(&image);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    ui->chartView->scene()->render(&painter, QRectF(), ui->chartView->sceneRect());
+
+    // Write the exported image into the file
+    if (!image.save(file_path)) {
+        QMessageBox::critical(this, "Error", "Unable to write into the selected file");
+        return;
+    }
 }

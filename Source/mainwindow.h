@@ -5,6 +5,7 @@
 #include <QGraphicsScene>
 #include <QButtonGroup>
 #include <QActionGroup>
+#include <QDir>
 
 #include "simulationscene.h"
 #include "simulationhandler.h"
@@ -40,6 +41,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+    static QDir lastUsedDirectory();
+    static void setLastUsedDirectory(QDir dir);
 
 
 public slots:
@@ -129,6 +133,7 @@ private:
     void showResultsRays();
     void showResultHeatMap();
     void showResultPlot1D();
+    void showImpulseResponses(Receiver *r);
 
 
     QPoint moveAligned(QPoint start, QPoint actual);

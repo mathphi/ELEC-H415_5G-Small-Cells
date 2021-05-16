@@ -10,6 +10,7 @@
 #include "simsetupdialog.h"
 #include "analysisline.h"
 #include "analysisdialog.h"
+#include "impulsedialog.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -30,6 +31,9 @@
 
 // Extension for saved files (Ray-Tracing Small-Cells MAP)
 #define FILE_EXTENSION "rtscmap"
+
+// Storage for the last used directory (default is home path)
+QDir g_last_used_dir = QDir::homePath();
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -183,6 +187,14 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+QDir MainWindow::lastUsedDirectory() {
+    return g_last_used_dir;
+}
+
+void MainWindow::setLastUsedDirectory(QDir dir) {
+    g_last_used_dir = dir;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -589,27 +601,41 @@ void MainWindow::graphicsSceneDoubleClicked(QGraphicsSceneMouseEvent *event) {
     }
 
     // Don't edit if we aren't in editor mode
-    if (m_ui_mode != UIMode::EditorMode)
-        return;
+    if (m_ui_mode == UIMode::EditorMode) {
 
-    // Search area for a double click
-    QRectF click_rect(event->scenePos() - QPointF(5,5), QSize(10,10));
+        // Search area for a double click
+        QRectF click_rect(event->scenePos() - QPointF(5,5), QSize(10,10));
 
-    // Loop over the items under the mouse position
-    foreach(QGraphicsItem *item, m_scene->items(click_rect)) {
-        // Try to cast this item
-        Emitter *em = dynamic_cast<Emitter*>(item);
-        Receiver *re = dynamic_cast<Receiver*>(item);
+        // Loop over the items under the mouse position
+        foreach(QGraphicsItem *item, m_scene->items(click_rect)) {
+            // Try to cast this item
+            Emitter *em = dynamic_cast<Emitter*>(item);
+            Receiver *re = dynamic_cast<Receiver*>(item);
 
-        // If one of them is an Emitter -> configure it
-        if (em != nullptr) {
-            configureEmitter(em);
-            break;
+            // If one of them is an Emitter -> configure it
+            if (em != nullptr) {
+                configureEmitter(em);
+                break;
+            }
+            // If one of them is an Receiver -> configure it
+            else if (re != nullptr) {
+                configureReceiver(re);
+                break;
+            }
         }
-        // If one of them is an Receiver -> configure it
-        else if (re != nullptr) {
-            configureReceiver(re);
-            break;
+    }
+    // Else, if we are in simulation mode
+    else {
+        // Loop over the items under the mouse position
+        foreach(QGraphicsItem *item, m_scene->items(event->scenePos())) {
+            // Try to cast this item
+            Receiver *re = dynamic_cast<Receiver*>(item);
+
+            // If one of them is an Receiver -> show impulse responses
+            if (re != nullptr) {
+                showImpulseResponses(re);
+                break;
+            }
         }
     }
 }
@@ -982,12 +1008,19 @@ void MainWindow::actionOpen() {
         return;
     }
 
-    QString file_path = QFileDialog::getOpenFileName(this, "Open a file", QString(), "*." FILE_EXTENSION);
+    QString file_path = QFileDialog::getOpenFileName(
+                this,
+                "Open a file",
+                MainWindow::lastUsedDirectory().path(),
+                "5G RayTracing project (*." FILE_EXTENSION ")");
 
     // If the user cancelled the dialog
     if (file_path.isEmpty()) {
         return;
     }
+
+    // Set the last used directory
+    MainWindow::setLastUsedDirectory(file_path);
 
     // Open the file (reading)
     QFile file(file_path);
@@ -1039,12 +1072,19 @@ void MainWindow::actionOpen() {
 }
 
 void MainWindow::actionSave() {
-    QString file_path = QFileDialog::getSaveFileName(this, "Save to file", QString(), "*." FILE_EXTENSION);
+    QString file_path = QFileDialog::getSaveFileName(
+                this,
+                "Save to file",
+                MainWindow::lastUsedDirectory().path(),
+                "5G RayTracing project (*." FILE_EXTENSION ")");
 
     // If the used cancelled the dialog
     if (file_path.isEmpty()) {
         return;
     }
+
+    // Set the last used directory
+    MainWindow::setLastUsedDirectory(file_path);
 
     // If the file hasn't the right extention -> add it
     if (file_path.split('.').last() != FILE_EXTENSION) {
@@ -1459,13 +1499,16 @@ void MainWindow::exportSimulationAction() {
     QString file_path = QFileDialog::getSaveFileName(
                 this,
                 "Export simulation result",
-                QDir::homePath(),
+                MainWindow::lastUsedDirectory().path(),
                 "JPG (*.jpg);;PNG (*.png);;TIFF (*.tiff)");
 
     // If the user cancelled the dialog
     if (file_path.isEmpty()) {
         return;
     }
+
+    // Set the last used directory
+    MainWindow::setLastUsedDirectory(file_path);
 
     // Prepare an image with the double resolution of the scene
     QImage image(ui->graphicsView->sceneRect().size().toSize()*2, QImage::Format_ARGB32);
@@ -1663,6 +1706,19 @@ void MainWindow::showResultHeatMap() {
 }
 
 void MainWindow::showResultPlot1D() {
-    AnalysisDialog ad(m_analysis_line->getReceiversList());
+    // Do nothing if there is no computed result
+    if (!m_simulation_handler->isDone())
+        return;
+
+    AnalysisDialog ad(m_analysis_line->getReceiversList(), this);
     ad.exec();
+}
+
+void MainWindow::showImpulseResponses(Receiver *r) {
+    // Do nothing if there is no computed result
+    if (!m_simulation_handler->isDone())
+        return;
+
+    ImpulseDialog imp_dialog(r, this);
+    imp_dialog.exec();
 }

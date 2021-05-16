@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include <QChart>
+#include <QValueAxis>
+#include <QLogValueAxis>
 
 #include "receiver.h"
 
@@ -24,6 +26,8 @@ private slots:
     void exportCurrentPlot();
 
 private:
+    QtCharts::QLogValueAxis *createDistanceAxis();
+    QtCharts::QValueAxis *createValueAxis(QString axis_name);
     void preparePlotsData();
 
     Ui::AnalysisDialog *ui;

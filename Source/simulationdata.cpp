@@ -110,28 +110,39 @@ double SimulationData::convertCelsiusToKelvin(double T_c) {
  *
  * This function converts a delay in seconds to a human readable delay
  */
-double SimulationData::delayToHumanReadable(double delay, QString *units) {
+double SimulationData::delayToHumanReadable(double delay, QString *units, double *scale_factor) {
     double hr_delay;
+    double factor;
 
     if (delay < 1e-9) {
         *units = "ps";
-        hr_delay = delay / 1e-12;
+        factor = 1e-12;
+        hr_delay = delay / factor;
     }
     else if (delay < 1e-6) {
         *units = "ns";
-        hr_delay = delay / 1e-9;
+        factor = 1e-9;
+        hr_delay = delay / factor;
     }
     else if (delay < 1e-3) {
         *units = "µs";
-        hr_delay = delay / 1e-6;
+        factor = 1e-6;
+        hr_delay = delay / factor;
     }
     else if (delay < 1e-0) {
         *units = "ms";
-        hr_delay = delay / 1e-3;
+        factor = 1e-3;
+        hr_delay = delay / factor;
     }
     else {
         *units = "s";
+        factor = 1;
         hr_delay = delay;
+    }
+
+    // If a scale factor is defined
+    if (scale_factor != nullptr) {
+        *scale_factor = factor;
     }
 
     return hr_delay;

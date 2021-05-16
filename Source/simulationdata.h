@@ -32,7 +32,7 @@ public:
     static double convertPowerTodBm(double power_watts);
     static double convertKelvinToCelsius(double T_k);
     static double convertCelsiusToKelvin(double T_c);
-    static double delayToHumanReadable(double delay, QString *units);
+    static double delayToHumanReadable(double delay, QString *units, double *scale_factor = nullptr);
 
     static QRgb ratioToColor(qreal ratio, bool light = false);
 
