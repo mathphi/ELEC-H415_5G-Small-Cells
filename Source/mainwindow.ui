@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1000</width>
-    <height>675</height>
+    <height>730</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -231,7 +231,7 @@
        <item>
         <widget class="QLabel" name="label_2">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the average power at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the average power over each m² of the simulation area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the simulation results at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the simulation results over each m² of the simulation area.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;1-D analysis:&lt;/span&gt; Calculate the simulation results along a line drawn on the map.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Simulation type*:</string>
@@ -241,7 +241,7 @@
        <item>
         <widget class="QComboBox" name="combobox_simType">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the average power at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the average power over each m² of the simulation area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the simulation results at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the simulation results over each m² of the simulation area.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;1-D analysis:&lt;/span&gt; Calculate the simulation results along a line drawn on the map.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <item>
           <property name="text">
@@ -251,6 +251,11 @@
          <item>
           <property name="text">
            <string>Full coverage</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>1-D analysis</string>
           </property>
          </item>
         </widget>
@@ -337,6 +342,13 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="button_analysisLine">
+         <property name="text">
+          <string>Place the analysis line</string>
+         </property>
+        </widget>
        </item>
        <item>
         <widget class="QPushButton" name="button_simControl">
@@ -697,16 +709,6 @@
   <action name="actionExit">
    <property name="text">
     <string>Quit</string>
-   </property>
-  </action>
-  <action name="actionAddBrickWall">
-   <property name="text">
-    <string>Ajouter un mur en brique</string>
-   </property>
-  </action>
-  <action name="actionAddConcreteWall">
-   <property name="text">
-    <string>Ajouter un mur en béton</string>
    </property>
   </action>
   <action name="actionAddBuilding">

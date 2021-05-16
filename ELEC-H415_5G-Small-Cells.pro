@@ -1,4 +1,4 @@
-QT       += core gui
+QT       += core gui charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -9,6 +9,8 @@ CONFIG += c++14
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    Source/analysisdialog.cpp \
+    Source/analysisline.cpp \
     Source/antennas.cpp \
     Source/building.cpp \
     Source/buildingdialog.cpp \
@@ -32,6 +34,8 @@ SOURCES += \
     Source/walls.cpp
 
 HEADERS += \
+    Source/analysisdialog.h \
+    Source/analysisline.h \
     Source/antennas.h \
     Source/building.h \
     Source/buildingdialog.h \
@@ -54,6 +58,7 @@ HEADERS += \
     Source/walls.h
 
 FORMS += \
+    Source/analysisdialog.ui \
     Source/buildingdialog.ui \
     Source/emitterdialog.ui \
     Source/mainwindow.ui \

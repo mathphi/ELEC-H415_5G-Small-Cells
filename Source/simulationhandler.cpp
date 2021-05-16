@@ -16,6 +16,7 @@ SimulationHandler::SimulationHandler()
 {
     m_sim_started = false;
     m_sim_cancelling = false;
+    m_sim_done = false;
     m_init_cu_count = 0;
 }
 
@@ -794,8 +795,15 @@ void SimulationHandler::startSimulationComputation(QList<Receiver*> rcv_list, QR
     emit simulationStarted();
     emit simulationProgress(0);
 
-    // Compute all rays
-    computeAllRays();
+    // Check if there are receivers to compute
+    if (rcv_list.size() > 0) {
+        // Compute all rays
+        computeAllRays();
+    }
+    else {
+        // If there is no receiver -> send the finished signal
+        computationUnitFinished();
+    }
 }
 
 /**

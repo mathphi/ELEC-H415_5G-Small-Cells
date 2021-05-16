@@ -12,8 +12,9 @@ class Corner;
 
 namespace SimType {
 enum SimType {
-    PointReceiver = 0,
-    AreaReceiver  = 1
+    PointReceiver   = 0,
+    AreaReceiver    = 1,
+    Analysis1D      = 2
 };
 }
 

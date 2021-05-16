@@ -8,6 +8,7 @@
 
 #include "simulationscene.h"
 #include "simulationhandler.h"
+#include "analysisline.h"
 
 namespace DrawActions {
 enum DrawActions {
@@ -16,6 +17,7 @@ enum DrawActions {
     Building,
     Emitter,
     Receiver,
+    AnalysisLine,
 };
 }
 
@@ -95,6 +97,7 @@ private slots:
     void simulationTypeChanged();
     void receiversAntennaChanged();
 
+    void drawAnalysisLine();
     void simulationSetupAction();
     void simulationControlAction();
     void simulationResetAction();
@@ -117,12 +120,15 @@ private:
     void setPointReceiversVisible(bool visible);
     void createSimArea();
     void deleteSimArea();
+    void deleteAnalysisLine();
+
     void simulationReset();
     bool askSimulationReset();
     void filterRaysThreshold();
     void showReceiversResult();
     void showResultsRays();
     void showResultHeatMap();
+    void showResultPlot1D();
 
 
     QPoint moveAligned(QPoint start, QPoint actual);
@@ -144,6 +150,7 @@ private:
     bool m_dragging_view;
 
     ReceiversArea *m_sim_area_item;
+    AnalysisLine *m_analysis_line;
 
     QButtonGroup *m_result_radio_grp;
     QActionGroup *m_map_edit_act_grp;

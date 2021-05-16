@@ -8,6 +8,8 @@
 #include "receiverdialog.h"
 #include "buildingdialog.h"
 #include "simsetupdialog.h"
+#include "analysisline.h"
+#include "analysisdialog.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -98,8 +100,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_map_edit_act_grp->addAction(ui->actionEraseObject);
     m_map_edit_act_grp->addAction(ui->actionEraseAll);
 
-    // Initialize simulation area to nullptr
+    // Initialize simulation area and analysis line to nullptr
     m_sim_area_item = nullptr;
+    m_analysis_line = nullptr;
 
     // Window File menu actions
     connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(close()));
@@ -136,16 +139,18 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->combobox_antennas_type, SIGNAL(currentIndexChanged(int)),
             this, SLOT(receiversAntennaChanged()));
 
-    connect(ui->button_simSetup,   SIGNAL(clicked()),         this, SLOT(simulationSetupAction()));
-    connect(ui->button_simControl, SIGNAL(clicked()),         this, SLOT(simulationControlAction()));
-    connect(ui->button_simReset,   SIGNAL(clicked()),         this, SLOT(simulationResetAction()));
-    connect(ui->button_editScene,  SIGNAL(clicked()),         this, SLOT(switchEditSceneMode()));
-    connect(ui->button_simExport,  SIGNAL(clicked()),         this, SLOT(exportSimulationAction()));
+    connect(ui->button_analysisLine,SIGNAL(clicked()),          this, SLOT(drawAnalysisLine()));
+    connect(ui->button_simSetup,    SIGNAL(clicked()),          this, SLOT(simulationSetupAction()));
+    connect(ui->button_simControl,  SIGNAL(clicked()),          this, SLOT(simulationControlAction()));
+    connect(ui->button_simReset,    SIGNAL(clicked()),          this, SLOT(simulationResetAction()));
+    connect(ui->button_editScene,   SIGNAL(clicked()),          this, SLOT(switchEditSceneMode()));
+    connect(ui->button_simExport,   SIGNAL(clicked()),          this, SLOT(exportSimulationAction()));
 
-    connect(ui->checkbox_rays,     SIGNAL(toggled(bool)),     this, SLOT(raysCheckboxToggled(bool)));
-    connect(ui->slider_threshold,  SIGNAL(valueChanged(int)), this, SLOT(raysThresholdChanged(int)));
+    connect(ui->checkbox_rays,      SIGNAL(toggled(bool)),      this, SLOT(raysCheckboxToggled(bool)));
+    connect(ui->slider_threshold,   SIGNAL(valueChanged(int)),  this, SLOT(raysThresholdChanged(int)));
 
-    connect(m_result_radio_grp, SIGNAL(idToggled(int,bool)),  this, SLOT(resultTypeSelectionChanged(int,bool)));
+    connect(m_result_radio_grp, SIGNAL(idToggled(int,bool)),
+            this, SLOT(resultTypeSelectionChanged(int,bool)));
 
     // Simulation handler signals
     connect(m_simulation_handler, SIGNAL(simulationStarted()), this, SLOT(simulationStarted()));
@@ -642,7 +647,7 @@ void MainWindow::graphicsSceneLeftPressed(QGraphicsSceneMouseEvent *event) {
  * Slot called when the user releases the left button on the graphics scene
  */
 void MainWindow::graphicsSceneLeftReleased(QGraphicsSceneMouseEvent *event) {
-    //QPoint pos = event->scenePos().toPoint();
+    QPoint pos = event->scenePos().toPoint();
 
     // End the dragging action when the mouse is released
     if (m_dragging_view) {
@@ -650,112 +655,155 @@ void MainWindow::graphicsSceneLeftReleased(QGraphicsSceneMouseEvent *event) {
         ui->graphicsView->setCursor(Qt::ArrowCursor);
     }
 
-    // If we are currently placing something
-    if (m_drawing_item != nullptr)
-    {
-        // Actions to do when we are placing an item
-        switch (m_draw_action) {
-        //////////////////////////////// BUILDING ACTION ////////////////////////////////
-        case DrawActions::Building: {
-            Building *building = (Building*) m_drawing_item;
+    // Actions to do when we are placing an item
+    switch (m_draw_action) {
+    //////////////////////////////// BUILDING ACTION ////////////////////////////////
+    case DrawActions::Building: {
+        Building *building = (Building*) m_drawing_item;
 
-            // Add this building to the simulation data
-            m_simulation_handler->simulationData()->attachBuilding(building);
+        // Add this building to the simulation data
+        m_simulation_handler->simulationData()->attachBuilding(building);
 
-            // Repeat the last action if the control or shift key was pressed
-            if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) {
-                // Clone the last placed receiver and place it
-                m_drawing_item = building->clone();
-                m_drawing_item->setVisible(false);
-                m_scene->addItem(m_drawing_item);
-            }
-            else {
-                // Detach the placed building from the mouse
-                m_drawing_item = nullptr;
-                m_draw_action = DrawActions::None;
-            }
-            break;
+        // Repeat the last action if the control or shift key was pressed
+        if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) {
+            // Clone the last placed receiver and place it
+            m_drawing_item = building->clone();
+            m_drawing_item->setVisible(false);
+            m_scene->addItem(m_drawing_item);
         }
+        else {
+            // Detach the placed building from the mouse
+            m_drawing_item = nullptr;
+            m_draw_action = DrawActions::None;
+        }
+        break;
+    }
         //////////////////////////////// EMITTER ACTION /////////////////////////////////
-        case DrawActions::Emitter: {
-            Emitter *emitter = (Emitter*) m_drawing_item;
+    case DrawActions::Emitter: {
+        Emitter *emitter = (Emitter*) m_drawing_item;
 
-            // Add this emitter to the simulation data
-            m_simulation_handler->simulationData()->attachEmitter(emitter);
+        // Add this emitter to the simulation data
+        m_simulation_handler->simulationData()->attachEmitter(emitter);
 
-            // Repeat the last action if the control or shift key was pressed
-            if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) {
-                // Clone the last placed receiver and place it
-                m_drawing_item = emitter->clone();
-                m_drawing_item->setVisible(false);
-                m_scene->addItem(m_drawing_item);
-            }
-            else {
-                // Detach the placed emitter from the mouse
-                m_drawing_item = nullptr;
-                m_draw_action = DrawActions::None;
-            }
-            break;
+        // Repeat the last action if the control or shift key was pressed
+        if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) {
+            // Clone the last placed receiver and place it
+            m_drawing_item = emitter->clone();
+            m_drawing_item->setVisible(false);
+            m_scene->addItem(m_drawing_item);
         }
+        else {
+            // Detach the placed emitter from the mouse
+            m_drawing_item = nullptr;
+            m_draw_action = DrawActions::None;
+        }
+        break;
+    }
         //////////////////////////////// RECEIVER ACTION /////////////////////////////////
-        case DrawActions::Receiver: {
-            Receiver *receiver = (Receiver*) m_drawing_item;
+    case DrawActions::Receiver: {
+        Receiver *receiver = (Receiver*) m_drawing_item;
 
-            // Add this receiver to the simulation data
-            m_simulation_handler->simulationData()->attachReceiver(receiver);
+        // Add this receiver to the simulation data
+        m_simulation_handler->simulationData()->attachReceiver(receiver);
 
-            // Repeat the last action if the control or shift key was pressed
-            if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) {
-                // Re-create a copy of the last placed receiver
-                m_drawing_item = receiver->clone();
-                m_drawing_item->setVisible(false);
-                m_scene->addItem(m_drawing_item);
-            }
-            else {
-                // Detach the placed received from the mouse
-                m_drawing_item = nullptr;
-                m_draw_action = DrawActions::None;
-            }
-            break;
+        // Repeat the last action if the control or shift key was pressed
+        if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) {
+            // Re-create a copy of the last placed receiver
+            m_drawing_item = receiver->clone();
+            m_drawing_item->setVisible(false);
+            m_scene->addItem(m_drawing_item);
         }
+        else {
+            // Detach the placed received from the mouse
+            m_drawing_item = nullptr;
+            m_draw_action = DrawActions::None;
+        }
+        break;
+    }
         //////////////////////////////// ERASE ACTION /////////////////////////////////
-        case DrawActions::Erase: {
-            QGraphicsRectItem *rect_item = (QGraphicsRectItem*) m_drawing_item;
+    case DrawActions::Erase: {
+        QGraphicsRectItem *rect_item = (QGraphicsRectItem*) m_drawing_item;
 
-            // Retreive all items under the eraser rectangle
-            QRectF rect (rect_item->pos(), rect_item->rect().size());
-            QList<QGraphicsItem*> trash = m_scene->items(rect);
+        // Retreive all items under the eraser rectangle
+        QRectF rect (rect_item->pos(), rect_item->rect().size());
+        QList<QGraphicsItem*> trash = m_scene->items(rect);
 
-            // Remove each items from the graphics scene and delete it
-            foreach (QGraphicsItem *item, trash) {
-                // Don't remove other items (ie: mouse tracker lines or
-                // eraser rectancgle) than the type SimulationItem
-                if (!(dynamic_cast<SimulationItem*>(item))) {
-                    continue;
-                }
-
-                // Remove the item from the scene
-                m_scene->removeItem(item);
-
-                // Action for some types of items
-                if (dynamic_cast<Building*>(item)) {
-                    // Remove it from the buildings list
-                    m_simulation_handler->simulationData()->detachBuilding((Building*) item);
-                }
-                else if (dynamic_cast<Emitter*>(item)){
-                    m_simulation_handler->simulationData()->detachEmitter((Emitter*) item);
-                }
-                else if (dynamic_cast<Receiver*>(item)){
-                    m_simulation_handler->simulationData()->detachReceiver((Receiver*) item);
-                }
-
-                delete item;
+        // Remove each items from the graphics scene and delete it
+        foreach (QGraphicsItem *item, trash) {
+            // Don't remove other items (ie: mouse tracker lines or
+            // eraser rectancgle) than the type SimulationItem
+            if (!(dynamic_cast<SimulationItem*>(item))) {
+                continue;
             }
-            break;
+
+            // Remove the item from the scene
+            m_scene->removeItem(item);
+
+            // Action for some types of items
+            if (dynamic_cast<Building*>(item)) {
+                // Remove it from the buildings list
+                m_simulation_handler->simulationData()->detachBuilding((Building*) item);
+            }
+            else if (dynamic_cast<Emitter*>(item)){
+                m_simulation_handler->simulationData()->detachEmitter((Emitter*) item);
+            }
+            else if (dynamic_cast<Receiver*>(item)){
+                m_simulation_handler->simulationData()->detachReceiver((Receiver*) item);
+            }
+
+            delete item;
         }
-        default:
-            break;
+        break;
+    }
+        //////////////////////////// ANALYSIS LINE ACTION //////////////////////////////
+    case DrawActions::AnalysisLine: {
+        // We need two clicks to place a Analysis Line:
+        // The first click places the origin point, the second places the destination
+
+        // Scale is 1.0 * SimulationScale if the ALT modifier is pressed
+        qreal scale = m_scene->simulationScale();
+
+        // If ALT modifier is not pressed
+        if (!(event->modifiers() & Qt::AltModifier)) {
+            scale = m_scene->simulationScale() * BUILDING_GRID_SIZE;
         }
+
+        // Compute the aligned position
+        QPointF a_pos = QPoint(pos / scale) * scale;
+
+        // If there is no drawing item yet -> it's the first click
+        if (!m_drawing_item) {
+            // Create the Analysis Line
+            AnalysisLine *al = new AnalysisLine(a_pos);
+            al->setPlacingMode(true);
+
+            // Add the analysis line to the scene
+            m_drawing_item = al;
+            m_scene->addItem(m_drawing_item);
+        }
+        else {
+            // Delete the previous analysis line (if one)
+            if (m_analysis_line) {
+                delete m_analysis_line;
+            }
+
+            // Store this analysis line into the dedicated attribute
+            m_analysis_line = dynamic_cast<AnalysisLine*>(m_drawing_item);
+
+            // Set this point as the second point of the analysis line
+            m_analysis_line->setEndPoint(a_pos);
+
+            // Disable placing mode
+            m_analysis_line->setPlacingMode(false);
+
+            // Release the draw action and drawing item
+            m_drawing_item = nullptr;
+            m_draw_action = DrawActions::None;
+        }
+        break;
+    }
+    case DrawActions::None:
+        break;
     }
 
     // Show mouse tracker only if we are placing something
@@ -841,7 +889,30 @@ void MainWindow::graphicsSceneMouseMoved(QGraphicsSceneMouseEvent *event) {
         m_drawing_item->show();
         break;
     }
-    default:
+    //////////////////////////// ANALYSIS LINE ACTION //////////////////////////////
+    case DrawActions::AnalysisLine: {
+        // The move event sets the analysis line's end point
+
+        // Scale is 1.0 * SimulationScale if the ALT modifier is pressed
+        qreal scale = m_scene->simulationScale();
+
+        // If ALT modifier is not pressed
+        if (!(event->modifiers() & Qt::AltModifier)) {
+            scale = m_scene->simulationScale() * BUILDING_GRID_SIZE;
+        }
+
+        // Compute the aligned position
+        QPointF a_pos = QPoint(pos / scale) * scale;
+
+        // Cast the analysis line
+        AnalysisLine *al = dynamic_cast<AnalysisLine*>(m_drawing_item);
+
+        // Set this point as the second point of the analysis line
+        al->setEndPoint(a_pos);
+
+        break;
+    }
+    case DrawActions::None:
         break;
     }
 }
@@ -1077,16 +1148,20 @@ void MainWindow::switchEditSceneMode() {
 }
 
 void MainWindow::updateSimulationUI() {
+    // Get the simulation type
+    SimType::SimType sim_type = SimulationHandler::simulationData()->simulationType();
+
     // Set the current simulation type
-    ui->combobox_simType->setCurrentIndex(m_simulation_handler->simulationData()->simulationType());
+    ui->combobox_simType->setCurrentIndex(sim_type);
 
     // Show/hide the progress bar
     ui->progressbar_simulation->setVisible(m_simulation_handler->isRunning());
 
     // Show/hide widget groups
-    ui->group_show_rays->setVisible(SimulationHandler::simulationData()->simulationType() == SimType::PointReceiver);
-    ui->group_result_type->setVisible(SimulationHandler::simulationData()->simulationType() == SimType::AreaReceiver);
-    ui->group_antenna_type->setVisible(SimulationHandler::simulationData()->simulationType() == SimType::AreaReceiver);
+    ui->group_show_rays->setVisible(sim_type == SimType::PointReceiver);
+    ui->group_result_type->setVisible(sim_type == SimType::AreaReceiver);
+    ui->group_antenna_type->setVisible(sim_type == SimType::AreaReceiver || sim_type == SimType::Analysis1D);
+    ui->button_analysisLine->setVisible(sim_type == SimType::Analysis1D);
 
     // Widgets enabling/disabling
     ui->label_threshold_msg->setEnabled(ui->checkbox_rays->isChecked());
@@ -1100,6 +1175,7 @@ void MainWindow::updateSimulationUI() {
     ui->button_editScene->setDisabled(m_simulation_handler->isRunning());
     ui->actionOpen->setDisabled(m_simulation_handler->isRunning());
     ui->actionSimulation_setup->setDisabled(m_simulation_handler->isRunning());
+    ui->button_analysisLine->setDisabled(m_simulation_handler->isRunning());
 
     // Change the control button text
     ui->button_simControl->setEnabled(!m_simulation_handler->isCancelling());
@@ -1123,14 +1199,28 @@ void MainWindow::updateSimulationScene() {
     if (m_ui_mode == UIMode::EditorMode) {
         setPointReceiversVisible(true);
         deleteSimArea();
-    }
-    else if (m_simulation_handler->simulationData()->simulationType() == SimType::PointReceiver) {
-        setPointReceiversVisible(true);
-        deleteSimArea();
+        deleteAnalysisLine();
     }
     else {
-        setPointReceiversVisible(false);
-        createSimArea();
+        switch (m_simulation_handler->simulationData()->simulationType()) {
+        case SimType::PointReceiver: {
+            setPointReceiversVisible(true);
+            deleteSimArea();
+            deleteAnalysisLine();
+            break;
+        }
+        case SimType::AreaReceiver: {
+            setPointReceiversVisible(false);
+            createSimArea();
+            deleteAnalysisLine();
+            break;
+        }
+        case SimType::Analysis1D: {
+            setPointReceiversVisible(false);
+            deleteSimArea();
+            break;
+        }
+        }
     }
 }
 
@@ -1194,6 +1284,19 @@ void MainWindow::deleteSimArea() {
     m_sim_area_item = nullptr;
 }
 
+void MainWindow::deleteAnalysisLine() {
+    // Nothing to do if no analysis line
+    if (!m_analysis_line)
+        return;
+
+    // Be sure the simulation is resetted
+    simulationReset();
+
+    // Remove the analysis line
+    delete m_analysis_line;
+    m_analysis_line = nullptr;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1206,19 +1309,22 @@ void MainWindow::simulationTypeChanged() {
 
     // Actions if the type actually changed
     if (SimulationHandler::simulationData()->simulationType() != sim_type) {
-        // Ask the user (since this will reset the simulation)
-        int ans = QMessageBox::warning(
-                    this,
-                    "Simulation reset warning",
-                    "Changing the simulation type will reset the current simulation results.\n"
-                    "Are you sure you want to continue?",
-                    QMessageBox::Yes | QMessageBox::No,
-                    QMessageBox::No);
+        // Ask only if a simulation is done (results have been computed)
+        if (m_simulation_handler->isDone()) {
+            // Ask the user (since this will reset the simulation)
+            int ans = QMessageBox::warning(
+                        this,
+                        "Simulation reset warning",
+                        "Changing the simulation type will reset the current simulation results.\n"
+                        "Are you sure you want to continue?",
+                        QMessageBox::Yes | QMessageBox::No,
+                        QMessageBox::No);
 
-        // Revert the combobox if the answer is Yes
-        if (ans != QMessageBox::Yes) {
-            ui->combobox_simType->setCurrentIndex(SimulationHandler::simulationData()->simulationType());
-            return;
+            // Revert the combobox if the answer is Yes
+            if (ans != QMessageBox::Yes) {
+                ui->combobox_simType->setCurrentIndex(SimulationHandler::simulationData()->simulationType());
+                return;
+            }
         }
 
         // Reset the simulation results
@@ -1247,6 +1353,17 @@ void MainWindow::receiversAntennaChanged() {
 }
 
 
+void MainWindow::drawAnalysisLine() {
+    // Cancel the current drawing (if one)
+    cancelCurrentDrawing();
+
+    // Delete the current analysis line (if one)
+    deleteAnalysisLine();
+
+    // Set the current draw action to AnalysisLine
+    m_draw_action = DrawActions::AnalysisLine;
+}
+
 void MainWindow::simulationSetupAction() {
     // Open the setup dialog
     SimSetupDialog setup_dialog(m_simulation_handler->simulationData());
@@ -1260,7 +1377,7 @@ void MainWindow::simulationControlAction() {
     SimType::SimType sim_type = SimulationHandler::simulationData()->simulationType();
 
     // Check the minimal requirements for this simulation type
-    if ((sim_type == SimType::AreaReceiver || sim_type == SimType::PointReceiver)
+    if ((sim_type == SimType::AreaReceiver || sim_type == SimType::PointReceiver || sim_type == SimType::Analysis1D)
             && SimulationHandler::simulationData()->getEmittersList().size() < 1)
     {
         QMessageBox::critical(
@@ -1301,6 +1418,23 @@ void MainWindow::simulationControlAction() {
             }
 
             m_simulation_handler->startSimulationComputation(m_sim_area_item->getReceiversList(), m_sim_area_item->getArea());
+            break;
+        }
+        case SimType::Analysis1D: {
+            // If there is no analysis line
+            if (m_analysis_line == nullptr) {
+                QMessageBox::critical(
+                            this,
+                            "Simulation error",
+                            "You must place an analysis line before starting this type of simulation.");
+                return;
+            }
+
+            // Generate the receivers on the analysis line
+            m_analysis_line->createReceivers((AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt());
+
+            QRectF area = m_scene->simulationBoundingRect();
+            m_simulation_handler->startSimulationComputation(m_analysis_line->getReceiversList(), area);
             break;
         }
         }
@@ -1488,6 +1622,10 @@ void MainWindow::showReceiversResult() {
         showResultHeatMap();
         break;
     }
+    case SimType::Analysis1D: {
+        showResultPlot1D();
+        break;
+    }
     }
 }
 
@@ -1522,4 +1660,9 @@ void MainWindow::showResultHeatMap() {
     }
 
     m_scene->showDataLegend(res_type, min, max);
+}
+
+void MainWindow::showResultPlot1D() {
+    AnalysisDialog ad(m_analysis_line->getReceiversList());
+    ad.exec();
 }
