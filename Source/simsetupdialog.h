@@ -20,6 +20,9 @@ public:
 public slots:
     virtual int exec();
 
+private slots:
+    void updateUiComponents();
+
 private:
     Ui::SimSetupDialog *ui;
     SimulationData *m_simulation_data;

@@ -13,7 +13,8 @@ enum ResultType {
     Power,
     SNR,
     DelaySpread,
-    RiceFactor
+    RiceFactor,
+    CoverageMap
 };
 }
 
@@ -53,6 +54,9 @@ public:
     void addRayPath(RayPath *rp);
     QList<RayPath*> getRayPaths();
 
+    void setOutOfModel(bool out);
+    bool outOfModel();
+
     double receivedPower();
     double userEndSNR();
     double delaySpread();
@@ -78,6 +82,7 @@ private:
     double m_res_min;
     double m_res_max;
 
+    bool m_out_of_model;
     bool m_flat;
     bool m_show_result;
 

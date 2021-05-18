@@ -19,6 +19,9 @@ Receiver::Receiver(Antenna *antenna) : SimulationItem()
     // Create the associated antenna of right type
     m_antenna = antenna;
 
+    // The receiver can be out of model if too close to an emitter
+    m_out_of_model = false;
+
     // The receiver is shaped or flat
     m_flat = false;
 
@@ -147,8 +150,8 @@ void Receiver::reset() {
     foreach (RayPath *rp, m_received_rays) {
         delete rp;
     }
-
     m_received_rays.clear();
+
     m_received_power = NAN;
     m_user_end_SNR   = NAN;
     m_delay_spread   = NAN;
@@ -156,6 +159,9 @@ void Receiver::reset() {
 
     // Hide the results
     m_show_result = false;
+
+    // Reset the Out of Model flag
+    m_out_of_model = false;
 
     // Generate the idle tooltip
     generateIdleTooltip();
@@ -188,6 +194,22 @@ void Receiver::addRayPath(RayPath *rp) {
 
 QList<RayPath*> Receiver::getRayPaths() {
     return m_received_rays;
+}
+
+void Receiver::setOutOfModel(bool out) {
+    if (out) {
+        // Delete all RayPaths from this receiver
+        foreach (RayPath *rp, m_received_rays) {
+            delete rp;
+        }
+        m_received_rays.clear();
+    }
+
+    m_out_of_model = out;
+}
+
+bool Receiver::outOfModel() {
+    return m_out_of_model;
 }
 
 /**
@@ -414,6 +436,7 @@ void Receiver::paintFlat(QPainter *painter) {
     case ResultType::Power:
         data = SimulationData::convertPowerTodBm(receivedPower());
         break;
+    case ResultType::CoverageMap:
     case ResultType::SNR:
         data = userEndSNR();
         break;
@@ -427,11 +450,15 @@ void Receiver::paintFlat(QPainter *painter) {
 
     QColor background_color;
 
-    if (data != 0 && !isinf(data) && !isnan(data)) {
+    if (data != 0 && !isinf(data) && !isnan(data) && !outOfModel() && !(data < m_res_min)) {
         double data_ratio = (data - m_res_min) / (m_res_max - m_res_min);
 
         // Use the light color profile
         background_color = SimulationData::ratioToColor(data_ratio, true);
+    }
+    else if (outOfModel()) {
+        // White background
+        background_color = qRgb(255,255,255);
     }
     else {
         // Gray background
@@ -455,13 +482,20 @@ void Receiver::showResults(ResultType::ResultType type, double min, double max) 
         max = ceil(SimulationData::convertPowerTodBm(max));
         break;
     }
-    case ResultType::SNR: {
+    case ResultType::SNR:
+    case ResultType::RiceFactor: {
         min = floor(min);
         max = ceil(max);
         break;
     }
-    default:
+    case ResultType::DelaySpread:
+        // Nothing to round/convert
         break;
+    case ResultType::CoverageMap: {
+        min = SimulationHandler::simulationData()->getSimulationTargetSNR();
+        max = ceil(max);
+        break;
+    }
     }
 
     // Store the data range
@@ -494,11 +528,22 @@ void Receiver::generateResultsTooltip() {
     //  - the delay spread (if one)
     //  - the rice factor (if one)
 
+
+    // Tooltip shows special message if out of model
+    if (outOfModel()) {
+        setToolTip(QString("<b><u>Receiver</u></b><br/>"
+                           "<b><i>%1</i></b><br/>"
+                           "<i><u>Out of Model</u></i>")
+                   .arg(m_antenna->getAntennaName()));
+        return;
+    }
+
+
     QString tip_str = QString(
                 "<b><u>Receiver</u></b><br/>"
                 "<b><i>%1</i></b><br/>"
-                "<b>Incident rays:</b> %2<br>"
-                "<b>Power:</b> %3&nbsp;dBm<br>"
+                "<b>Incident rays:</b> %2<br/>"
+                "<b>Power:</b> %3&nbsp;dBm<br/>"
                 "<b>UE SNR:</b> %4&nbsp;dB")
             .arg(m_antenna->getAntennaName())
             .arg(getRayPaths().size())
@@ -511,10 +556,10 @@ void Receiver::generateResultsTooltip() {
     if (!isnan(delay_spread)) {
         QString units;
         double hr_ds = SimulationData::delayToHumanReadable(delaySpread(), &units);
-        tip_str.append(QString("<br><b>Delay spread: </b>%1&nbsp;%2").arg(hr_ds, 0, 'f', 2).arg(units));
+        tip_str.append(QString("<br/><b>Delay spread: </b>%1&nbsp;%2").arg(hr_ds, 0, 'f', 2).arg(units));
     }
     if (!isnan(rice_factor) && !isinf(rice_factor)) {
-        tip_str.append(QString("<br><b>Rice factor: </b>%1&nbsp;dB").arg(rice_factor, 0, 'f', 2));
+        tip_str.append(QString("<br/><b>Rice factor: </b>%1&nbsp;dB").arg(rice_factor, 0, 'f', 2));
     }
 
     setToolTip(tip_str);
@@ -569,6 +614,7 @@ void ReceiversArea::getReceivedDataBounds(ResultType::ResultType type, double *m
                 continue;
 
             break;
+        case ResultType::CoverageMap:
         case ResultType::SNR:
             val = r->userEndSNR();
             break;

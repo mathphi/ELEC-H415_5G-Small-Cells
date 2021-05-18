@@ -91,10 +91,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Create a button group with result type radio buttons
     m_result_radio_grp = new QButtonGroup(this);
-    m_result_radio_grp->addButton(ui->radio_result_power, ResultType::Power);
-    m_result_radio_grp->addButton(ui->radio_result_SNR,   ResultType::SNR);
-    m_result_radio_grp->addButton(ui->radio_result_delay, ResultType::DelaySpread);
-    m_result_radio_grp->addButton(ui->radio_result_rice,  ResultType::RiceFactor);
+    m_result_radio_grp->addButton(ui->radio_result_power,       ResultType::Power);
+    m_result_radio_grp->addButton(ui->radio_result_SNR,         ResultType::SNR);
+    m_result_radio_grp->addButton(ui->radio_result_delay,       ResultType::DelaySpread);
+    m_result_radio_grp->addButton(ui->radio_result_rice,        ResultType::RiceFactor);
+    m_result_radio_grp->addButton(ui->radio_result_coverage,    ResultType::CoverageMap);
 
     // Create an action group with map editing actions
     m_map_edit_act_grp = new QActionGroup(this);
@@ -1041,11 +1042,17 @@ void MainWindow::actionOpen() {
         m_sim_area_item = nullptr;
     }
 
-    // Clear the scene
+    // Clear the scene (including buildings, emitters and receivers)
     clearAllItems();
+
+    // Temporary storage for view rect
+    QRectF view_rect;
+    qreal view_scale;
 
     // Read data from the file
     QDataStream in(&file);
+    in >> view_rect;
+    in >> view_scale;
     in >> m_simulation_handler->simulationData();
 
     // Update the graphics scene with read data
@@ -1070,8 +1077,14 @@ void MainWindow::actionOpen() {
     // Close the file
     file.close();
 
-    // Reset the view after opening the file
-    resetView();
+    // Restore the saved view after opening the file
+    QTransform t;
+    t.scale(view_scale, view_scale);
+    ui->graphicsView->setTransform(t);
+    ui->graphicsView->setSceneRect(view_rect);
+
+    // Trigger the view changed procedures
+    updateSceneRect();
 }
 
 void MainWindow::actionSave() {
@@ -1103,6 +1116,8 @@ void MainWindow::actionSave() {
 
     // Write current data into the file
     QDataStream out (&file);
+    out << ui->graphicsView->sceneRect();
+    out << ui->graphicsView->transform().m11();
     out << m_simulation_handler->simulationData();
 
     // Close the file
@@ -1218,6 +1233,7 @@ void MainWindow::updateSimulationUI() {
     ui->button_editScene->setDisabled(m_simulation_handler->isRunning());
     ui->actionOpen->setDisabled(m_simulation_handler->isRunning());
     ui->actionSimulation_setup->setDisabled(m_simulation_handler->isRunning());
+    ui->button_simSetup->setDisabled(m_simulation_handler->isRunning());
     ui->button_analysisLine->setDisabled(m_simulation_handler->isRunning());
 
     // Change the control button text
@@ -1253,9 +1269,16 @@ void MainWindow::updateSimulationScene() {
             break;
         }
         case SimType::AreaReceiver: {
+            // Show waiting cursor (sim area generation may take a while)
+            QCursor cur = cursor();
+            setCursor(Qt::WaitCursor);
+
             setPointReceiversVisible(false);
             createSimArea();
             deleteAnalysisLine();
+
+            // Recover the original cursor
+            setCursor(cur);
             break;
         }
         case SimType::Analysis1D: {

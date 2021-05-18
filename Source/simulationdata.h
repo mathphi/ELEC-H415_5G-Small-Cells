@@ -11,7 +11,7 @@
 class Corner;
 
 namespace SimType {
-enum SimType {
+enum SimType : int {
     PointReceiver   = 0,
     AreaReceiver    = 1,
     Analysis1D      = 2
@@ -24,9 +24,6 @@ class SimulationData : public QObject
 
 public:
     SimulationData();
-    SimulationData(QList<Building*> b_l, QList<Emitter*> e_l, QList<Receiver*> r_l);
-
-    void setInitData(QList<Building*> b_l, QList<Emitter*> e_l, QList<Receiver*> r_l);
     
     static double convertPowerToWatts(double power_dbm);
     static double convertPowerTodBm(double power_watts);
@@ -64,6 +61,8 @@ public:
     double getSimulationNoiseFigure() const;
     double getSimulationTargetSNR() const;
     double getMinimumValidRadius() const;
+    double getPruningRadius() const;
+
     double computeThermalNoise() const;
 
     int maxReflectionsCount() const;
@@ -78,6 +77,7 @@ public slots:
     void setSimulationNoiseFigure(double nf);
     void setSimulationTargetSNR(double snr);
     void setMinimumValidRadius(double radius);
+    void setPruningRadius(double radius);
 
     void setSimulationHeight(double height);
     void setReflectionsCount(int cnt);
@@ -89,6 +89,11 @@ private:
     QList<Receiver*> m_receiver_list;
 
 
+    // Simulation settings
+    SimType::SimType m_simulation_type;
+    int m_reflections_count;
+    bool m_nlos_refl_en;
+
     // Simulation parameters
     double m_rel_permitivity;
     double m_simulation_height;
@@ -97,16 +102,12 @@ private:
     double m_sim_noise_figure;
     double m_sim_target_SNR;
     double m_min_valid_radius;
+    double m_pruning_radius;
 
 
-    // Simulation settings
-    SimType::SimType m_simulation_type;
-    int m_reflections_count;
-    bool m_nlos_refl_en;
+    // Operator overload to write the simulation data into a file
+    friend QDataStream &operator>>(QDataStream &in, SimulationData *sd);
+    friend QDataStream &operator<<(QDataStream &out, SimulationData *sd);
 };
-
-// Operator overload to write the simulation data into a file
-QDataStream &operator>>(QDataStream &in, SimulationData *sd);
-QDataStream &operator<<(QDataStream &out, SimulationData *sd);
 
 #endif // SIMULATIONDATA_H

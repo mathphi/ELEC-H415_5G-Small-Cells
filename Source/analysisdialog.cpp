@@ -204,6 +204,7 @@ void AnalysisDialog::selectedTypeChanged() {
         ui->chartView->setChart(m_power_plot);
         break;
     }
+    case ResultType::CoverageMap:
     case ResultType::SNR: {
         ui->chartView->setChart(m_snr_plot);
         break;
@@ -287,6 +288,7 @@ void AnalysisDialog::exportPlotData(QString file_path) {
         current_series = m_power_series;
         break;
     }
+    case ResultType::CoverageMap:
     case ResultType::SNR: {
         current_series = m_snr_series;
         break;

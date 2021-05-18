@@ -15,7 +15,8 @@
 #define DEFAULT_SIM_HEIGHT  2.0;    // Meters
 
 // Default minimum validity radius
-#define DEFAULT_VALID_RADIUS 10.0   // Meters
+#define DEFAULT_VALID_RADIUS 10.0       // Meters
+#define DEFAULT_PRUNE_RADIUS INFINITY   // Meters
 
 // Default simulation parameters
 #define DEFAULT_SIM_BANDWIDTH       200 // MHz
@@ -38,17 +39,7 @@ SimulationData::SimulationData() : QObject()
     m_sim_noise_figure  = DEFAULT_SIM_NOISE_FIGURE;
     m_sim_target_SNR    = DEFAULT_SIM_TARGET_SNR;
     m_min_valid_radius  = DEFAULT_VALID_RADIUS;
-}
-
-SimulationData::SimulationData(QList<Building*> b_l, QList<Emitter*> e_l, QList<Receiver*> r_l) : SimulationData()
-{
-    setInitData(b_l, e_l, r_l);
-}
-
-void SimulationData::setInitData(QList<Building*> b_l, QList<Emitter*> e_l, QList<Receiver*> r_l) {
-    m_building_list = b_l;
-    m_emitter_list = e_l;
-    m_receiver_list = r_l;
+    m_pruning_radius    = DEFAULT_PRUNE_RADIUS;
 }
 
 // ---------------------------------------------------------------------------------------------- //
@@ -161,7 +152,7 @@ QRgb SimulationData::ratioToColor(qreal ratio, bool light) {
     const int peak_color = (light ? PEAK_COLOR_LIGHT : PEAK_COLOR_DARK);
 
     // Ratio limited from 0 to 1
-    ratio = max(0.0, min(1.0, ratio));
+    ratio = qBound(0.0, ratio, 1.0);
 
     if (ratio > 0.75) {         // Go from red to yellow
         r = peak_color;
@@ -219,8 +210,6 @@ void SimulationData::reset() {
     m_building_list.clear();
     m_emitter_list.clear();
     m_receiver_list.clear();
-
-    //TODO: complete this
 }
 
 QList<Wall*> SimulationData::makeBuildingWallsFiltered(const QRectF boundary_rect) const {
@@ -417,39 +406,63 @@ double SimulationData::getMinimumValidRadius() const {
     return m_min_valid_radius;
 }
 
+void SimulationData::setPruningRadius(double radius) {
+    m_pruning_radius = radius;
+}
+double SimulationData::getPruningRadius() const {
+    return m_pruning_radius;
+}
+
 // ---------------------------------------------------------------------------------------------- //
 
 // +++++++++++++++++++++++++++ SIMULATION DATA FILE WRITING FUNCTIONS +++++++++++++++++++++++++++ //
 
-//TODO: update this
 QDataStream &operator>>(QDataStream &in, SimulationData *sd) {
     sd->reset();
 
-    QList<Building*> buildings_list;
-    QList<Emitter*> emitters_list;
-    QList<Receiver*> receiver_list;
-    int max_refl_count;
-    int sim_type;
+    // Simulation settings
+    in >> sd->m_simulation_type;
+    in >> sd->m_reflections_count;
+    in >> sd->m_nlos_refl_en;
 
-    in >> buildings_list;
-    in >> emitters_list;
-    in >> receiver_list;
-    in >> max_refl_count;
-    in >> sim_type;
+    // Simulation parameters
+    in >> sd->m_rel_permitivity;
+    in >> sd->m_simulation_height;
+    in >> sd->m_sim_bandwidth;
+    in >> sd->m_sim_temperature;
+    in >> sd->m_sim_noise_figure;
+    in >> sd->m_sim_target_SNR;
+    in >> sd->m_min_valid_radius;
+    in >> sd->m_pruning_radius;
 
-    sd->setInitData(buildings_list, emitters_list, receiver_list);
-    sd->setReflectionsCount(max_refl_count);
-    sd->setSimulationType((SimType::SimType) sim_type);
+    // Get buildings lists
+    in >> sd->m_building_list;
+    in >> sd->m_emitter_list;
+    in >> sd->m_receiver_list;
 
     return in;
 }
 
 QDataStream &operator<<(QDataStream &out, SimulationData *sd) {
-    out << sd->getBuildingsList();
-    out << sd->getEmittersList();
-    out << sd->getReceiverList();
-    out << sd->maxReflectionsCount();
-    out << (int) sd->simulationType();
+    // Simulation settings
+    out << sd->m_simulation_type;
+    out << sd->m_reflections_count;
+    out << sd->m_nlos_refl_en;
+
+    // Simulation parameters
+    out << sd->m_rel_permitivity;
+    out << sd->m_simulation_height;
+    out << sd->m_sim_bandwidth;
+    out << sd->m_sim_temperature;
+    out << sd->m_sim_noise_figure;
+    out << sd->m_sim_target_SNR;
+    out << sd->m_min_valid_radius;
+    out << sd->m_pruning_radius;
+
+    // Get buildings lists
+    out << sd->m_building_list;
+    out << sd->m_emitter_list;
+    out << sd->m_receiver_list;
 
     return out;
 }

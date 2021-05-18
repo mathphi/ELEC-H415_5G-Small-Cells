@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>550</width>
-    <height>275</height>
+    <height>300</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -123,6 +123,23 @@
          </property>
         </widget>
        </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="validEmitterRadiusLabel">
+         <property name="text">
+          <string>Emitter's validity radius:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QDoubleSpinBox" name="validEmitterRadiusSpinBox">
+         <property name="suffix">
+          <string> m</string>
+         </property>
+         <property name="decimals">
+          <number>0</number>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>
@@ -205,6 +222,35 @@
         <widget class="QDoubleSpinBox" name="targetSNRSpinBox">
          <property name="suffix">
           <string> dB</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="pruningRadiusLabel">
+         <property name="text">
+          <string>Emitter's pruning radius:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QDoubleSpinBox" name="pruningRadiusSpinBox">
+         <property name="specialValueText">
+          <string>No pruning</string>
+         </property>
+         <property name="suffix">
+          <string> m</string>
+         </property>
+         <property name="decimals">
+          <number>0</number>
+         </property>
+         <property name="maximum">
+          <double>10000.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>10.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>0.000000000000000</double>
          </property>
         </widget>
        </item>

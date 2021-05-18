@@ -1,6 +1,7 @@
 #include "datalegenditem.h"
 #include "simulationscene.h"
 #include "simulationdata.h"
+#include "simulationhandler.h"
 
 #include <QPainter>
 
@@ -41,6 +42,10 @@ void DataLegendItem::setDataRange(ResultType::ResultType type, double min, doubl
         mid = (max+min)/2;
         break;
     }
+    case ResultType::CoverageMap:
+        min = SimulationHandler::simulationData()->getSimulationTargetSNR();
+        mid = (max+min)/2;
+        __attribute__ ((fallthrough));
     case ResultType::SNR:
     case ResultType::RiceFactor: {
         units_min = "dB";

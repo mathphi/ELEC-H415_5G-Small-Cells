@@ -21,11 +21,11 @@ public:
 
     static SimulationData *simulationData();
 
-    QList<RayPath*> getRayPathsList();
+    QList<RayPath*> getRayPathsList() const;
 
-    bool isDone();
-    bool isRunning();
-    bool isCancelling();
+    bool isDone() const;
+    bool isRunning() const;
+    bool isCancelling() const;
 
     static QPointF mirror(const QPointF source, Wall *wall);
 

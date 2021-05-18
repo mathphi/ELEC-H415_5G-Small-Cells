@@ -36,7 +36,7 @@ SimulationData *SimulationHandler::simulationData() {
  *
  * This function returns all the computed ray paths in the scene
  */
-QList<RayPath*> SimulationHandler::getRayPathsList() {
+QList<RayPath*> SimulationHandler::getRayPathsList() const {
     QList<RayPath*> ray_paths;
 
     // Append the ray paths of each receivers to the ray paths list to return
@@ -53,7 +53,7 @@ QList<RayPath*> SimulationHandler::getRayPathsList() {
  *
  * This function returns true if a simulation result has been computed
  */
-bool SimulationHandler::isDone() {
+bool SimulationHandler::isDone() const {
     return m_sim_done;
 }
 
@@ -63,7 +63,7 @@ bool SimulationHandler::isDone() {
  *
  * This function returns true if a simulation computation is running
  */
-bool SimulationHandler::isRunning() {
+bool SimulationHandler::isRunning() const {
     return m_sim_started;
 }
 
@@ -73,7 +73,7 @@ bool SimulationHandler::isRunning() {
  *
  * This function returns true if the simulation is cancelling
  */
-bool SimulationHandler::isCancelling() {
+bool SimulationHandler::isCancelling() const {
     return m_sim_cancelling;
 }
 
@@ -626,14 +626,22 @@ void SimulationHandler::computeReceiverRays(Receiver *r) {
     // Loop over the emitters
     foreach(Emitter *e, simulationData()->getEmittersList())
     {
-        // Compute the direct ray path
-        RayPath *LOS = computeRayPath(e, r);
+        // Compute the straight line distance to the base station
+        double bs_dist = QLineF(e->getRealPos(), r->getRealPos()).length();
 
-        // Ignore this receiver if the distance to the receiver is lower than the minimum
-        if (LOS != nullptr && LOS->getTotalLength() < simulationData()->getMinimumValidRadius()) {
-            delete LOS;
+        // Set this receiver as Out of Model
+        if (bs_dist < simulationData()->getMinimumValidRadius()) {
+            r->setOutOfModel(true);
+            break;  // No need to compute it for other emitters
+        }
+
+        // Ignore this receiver if the distance to the base station is lower than pruning threshold
+        if (bs_dist > simulationData()->getPruningRadius()) {
             continue;
         }
+
+        // Compute the direct ray path
+        RayPath *LOS = computeRayPath(e, r);
 
         // Add it to his receiver
         r->addRayPath(LOS);
@@ -706,12 +714,13 @@ void SimulationHandler::computationUnitFinished() {
     // Get the computation unit (origin of the signal)
     ComputationUnit *cu = qobject_cast<ComputationUnit*> (sender());
 
+    // Lock this whole slot
+    m_mutex.lock();
+
     // If a computation unit is the origin of the call to this function
     if (cu != nullptr) {
         // One thread can write in this list at a time (mutex)
-        m_mutex.lock();
         m_computation_units.removeAll(cu);
-        m_mutex.unlock();
 
         // Delete this computation unit
         delete cu;
@@ -739,9 +748,6 @@ void SimulationHandler::computationUnitFinished() {
             emit simulationFinished();
         }
         else {
-            // Lock this section
-            m_mutex.lock();
-
             // If this is the lastest cancelling thread
             if (m_threadpool.activeThreadCount() <= 1) {
                 // Reset the cancelling flag
@@ -750,11 +756,11 @@ void SimulationHandler::computationUnitFinished() {
                 // Emit the simulation cancelled signal
                 emit simulationCancelled();
             }
-
-            // Unlock this section
-            m_mutex.unlock();
         }
     }
+
+    // Unlock
+    m_mutex.unlock();
 }
 
 /**
