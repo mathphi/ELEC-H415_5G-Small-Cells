@@ -40,6 +40,9 @@ ImpulseDialog::ImpulseDialog(Receiver *r, QWidget *parent) :
     ui->chartView->setRenderHint(QPainter::Antialiasing, true);
     ui->chartView->setRenderHint(QPainter::TextAntialiasing, true);
 
+    // Initial spinbox bandwidth = simulation bandwidth
+    ui->bandwidthSpinBox->setValue(SimulationHandler::simulationData()->getSimulationBandwidth() / 1e6);
+
     // Add impulses types into combobox
     ui->impulseTypeComboBox->addItem("Physical impulse response",   ImpulseType::Physical);
     ui->impulseTypeComboBox->addItem("TDL impulse response",        ImpulseType::TDL);
@@ -65,7 +68,7 @@ ImpulseDialog::~ImpulseDialog()
 }
 
 void ImpulseDialog::plotSelectedImpulseType() {
-    // Get the currenltu selected impulse response
+    // Get the currently selected impulse response
     ImpulseType::ImpulseType imp_type = (ImpulseType::ImpulseType) ui->impulseTypeComboBox->currentData().toInt();
 
     // Get the corresponding data set and generate the title
@@ -228,7 +231,7 @@ void ImpulseDialog::exportCurrentPlot() {
                 this,
                 "Export impulse response plot",
                 MainWindow::lastUsedDirectory().path(),
-                "JPG (*.jpg);;PNG (*.png);;TIFF (*.tiff)");
+                "JPG (*.jpg);;PNG (*.png);;TIFF (*.tiff);;CSV File (*.csv)");
 
     // If the user cancelled the dialog
     if (file_path.isEmpty()) {
@@ -236,8 +239,18 @@ void ImpulseDialog::exportCurrentPlot() {
     }
 
     // Set the last used directory
-    MainWindow::setLastUsedDirectory(file_path);
+    MainWindow::setLastUsedDirectory(QFileInfo(file_path).dir());
 
+    if (QFileInfo(file_path).suffix() == "csv") {
+        exportPlotData(file_path);
+    }
+    else {
+        exportPlotImage(file_path);
+    }
+}
+
+
+void ImpulseDialog::exportPlotImage(QString file_path) {
     // Prepare an image with the double resolution of the scene
     QImage image(ui->chartView->sceneRect().size().toSize()*4, QImage::Format_ARGB32);
 
@@ -259,6 +272,56 @@ void ImpulseDialog::exportCurrentPlot() {
         QMessageBox::critical(this, "Error", "Unable to write into the selected file");
         return;
     }
+}
+
+void ImpulseDialog::exportPlotData(QString file_path) {
+    // File handler instance
+    QFile csv_file(file_path);
+
+    // Open in write mode
+    if (!csv_file.open(QIODevice::WriteOnly)) {
+        QMessageBox::critical(this, "Error", "Unable to write into the selected file");
+        return;
+    }
+
+    // Get the currently selected impulse response
+    ImpulseType::ImpulseType imp_type = (ImpulseType::ImpulseType) ui->impulseTypeComboBox->currentData().toInt();
+
+    // Get the corresponding data set
+    QMap<double,complex> dataset;
+
+    switch (imp_type) {
+    case ImpulseType::Physical: {
+        dataset = computePhysicalImpulse();
+        break;
+    }
+    case ImpulseType::TDL: {
+        dataset = computeTDLImpulse();
+        break;
+    }
+    case ImpulseType::UncorrelatedTDL: {
+        dataset = computeUncorrelatedTDLImpulse();
+        break;
+    }
+    }
+
+    // Put data points into the file
+    QString csv_content;
+
+    // Dataset lists
+    QList<double> keys = dataset.keys();
+    QList<complex> values_c = dataset.values();
+
+    // Each line is a tab-separated values line
+    for (int i = 0 ; i < dataset.size() ; i++) {
+        csv_content.append(QString("%1,%2\n").arg(keys.at(i), 0, 'f', 10).arg(abs(values_c.at(i)), 0, 'f', 10));
+    }
+
+    // Write content to file
+    csv_file.write(csv_content.toUtf8());
+
+    // Close the file
+    csv_file.close();
 }
 
 void ImpulseDialog::updateUiComponents() {
@@ -298,7 +361,7 @@ QMap<double, complex> ImpulseDialog::computePhysicalImpulse() {
     foreach(RayPath *rp, m_receiver->getRayPaths()) {
         double ampl  = rp->getAmplitude();
         double phase = arg(dotProduct(rp->getElectricField(), polariz));
-        complex tap  = ampl*exp(phase);
+        complex tap  = ampl*exp(1i*phase);
         double tau   = rp->getDelay();
 
         imp_taps.insert(tau, imp_taps.value(tau, 0.0) + tap);
@@ -321,10 +384,13 @@ QMap<double,complex> ImpulseDialog::computeTDLImpulse() {
     // Get the physical impulse response
     QMap<double,complex> phys_imp = computePhysicalImpulse();
 
+    // Get the configured bandwidth
+    double bw = ui->bandwidthSpinBox->value() * 1e6;
+
     double delta_tau;
     if (ui->bandwidthSpinBox->value() > 0) {
         // Compute the time resolution
-        delta_tau = 1 / (2.0 * ui->bandwidthSpinBox->value() * 1e6);
+        delta_tau = 1 / (2.0 * bw);
     }
     else {
         // If narrowband -> delta tau is the whole time range
@@ -343,13 +409,45 @@ QMap<double,complex> ImpulseDialog::computeTDLImpulse() {
         // Get the discrete tau
         tau_key = ceil(phys_tau / delta_tau) * delta_tau;
 
+        // TDL sinc factor
+        double sinc_factor = sinc(2*bw * (phys_tau - tau_key));
+
         // Accumulate physical taps in this tap
-        tdl_imp.insert(tau_key, phys_val + tdl_imp.value(tau_key, 0.0));
+        tdl_imp.insert(tau_key, phys_val*sinc_factor + tdl_imp.value(tau_key, 0.0));
     }
 
     return tdl_imp;
 }
 
 QMap<double,complex> ImpulseDialog::computeUncorrelatedTDLImpulse() {
+    // Get the physical impulse response
+    QMap<double,complex> phys_imp = computePhysicalImpulse();
 
+    double delta_tau;
+    if (ui->bandwidthSpinBox->value() > 0) {
+        // Compute the time resolution
+        delta_tau = 1 / (2.0 * ui->bandwidthSpinBox->value() * 1e6);
+    }
+    else {
+        // If narrowband -> delta tau is the whole time range
+        delta_tau = phys_imp.lastKey();
+    }
+
+    // TDL impulse response under US assumption
+    double tau_key;
+    QMap<double,complex> tdl_us_imp;
+
+    // Place the taps in their respective discrete taps
+    foreach (double phys_tau, phys_imp.keys()) {
+        // Get the physical impulse value at this tau
+        complex phys_val = phys_imp.value(phys_tau);
+
+        // Get the discrete tau
+        tau_key = ceil(phys_tau / delta_tau) * delta_tau;
+
+        // Accumulate physical taps in this tap
+        tdl_us_imp.insert(tau_key, phys_val + tdl_us_imp.value(tau_key, 0.0));
+    }
+
+    return tdl_us_imp;
 }

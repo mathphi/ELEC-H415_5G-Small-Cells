@@ -122,6 +122,12 @@ void AnalysisDialog::preparePlotsData() {
         }
     }
 
+    // Pointer to these series
+    m_power_series  = power_series;
+    m_snr_series    = snr_series;
+    m_delay_series  = delay_series;
+    m_rice_series   = rice_series;
+
     // Create the plots
     m_power_plot    = new QChart();
     m_snr_plot      = new QChart();
@@ -218,9 +224,9 @@ void AnalysisDialog::exportCurrentPlot() {
     // Open file selection dialog
     QString file_path = QFileDialog::getSaveFileName(
                 this,
-                "Export impulse response plot",
+                "Export 1-D analysis plot",
                 MainWindow::lastUsedDirectory().path(),
-                "JPG (*.jpg);;PNG (*.png);;TIFF (*.tiff)");
+                "JPG (*.jpg);;PNG (*.png);;TIFF (*.tiff);;CSV File (*.csv)");
 
     // If the user cancelled the dialog
     if (file_path.isEmpty()) {
@@ -228,8 +234,17 @@ void AnalysisDialog::exportCurrentPlot() {
     }
 
     // Set the last used directory
-    MainWindow::setLastUsedDirectory(file_path);
+    MainWindow::setLastUsedDirectory(QFileInfo(file_path).dir());
 
+    if (QFileInfo(file_path).suffix() == "csv") {
+        exportPlotData(file_path);
+    }
+    else {
+        exportPlotImage(file_path);
+    }
+}
+
+void AnalysisDialog::exportPlotImage(QString file_path) {
     // Prepare an image with the double resolution of the scene
     QImage image(ui->chartView->sceneRect().size().toSize()*4, QImage::Format_ARGB32);
 
@@ -251,4 +266,55 @@ void AnalysisDialog::exportCurrentPlot() {
         QMessageBox::critical(this, "Error", "Unable to write into the selected file");
         return;
     }
+}
+
+void AnalysisDialog::exportPlotData(QString file_path) {
+    // File handler instance
+    QFile csv_file(file_path);
+
+    // Open in write mode
+    if (!csv_file.open(QIODevice::WriteOnly)) {
+        QMessageBox::critical(this, "Error", "Unable to write into the selected file");
+        return;
+    }
+
+    // Get the current series
+    QLineSeries *current_series;
+    ResultType::ResultType r_type = (ResultType::ResultType) ui->resultTypeComboBox->currentData().toInt();
+
+    switch (r_type) {
+    case ResultType::Power: {
+        current_series = m_power_series;
+        break;
+    }
+    case ResultType::SNR: {
+        current_series = m_snr_series;
+        break;
+    }
+    case ResultType::DelaySpread: {
+        current_series = m_delay_series;
+        break;
+    }
+    case ResultType::RiceFactor: {
+        current_series = m_rice_series;
+        break;
+    }
+    }
+
+    // Get the data points
+    QList<QPointF> points = current_series->points();
+
+    // Put data points into the file
+    QString csv_content;
+
+    // Each line is a tab-separated values line
+    foreach(QPointF pt, points) {
+        csv_content.append(QString("%1,%2\n").arg(pt.x(), 0, 'f', 10).arg(pt.y(), 0, 'f', 10));
+    }
+
+    // Write content to file
+    csv_file.write(csv_content.toUtf8());
+
+    // Close the file
+    csv_file.close();
 }

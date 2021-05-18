@@ -5,6 +5,7 @@
 #include <QChart>
 #include <QValueAxis>
 #include <QLogValueAxis>
+#include <QLineSeries>
 
 #include "receiver.h"
 
@@ -29,6 +30,8 @@ private:
     QtCharts::QLogValueAxis *createDistanceAxis();
     QtCharts::QValueAxis *createValueAxis(QString axis_name);
     void preparePlotsData();
+    void exportPlotImage(QString file_path);
+    void exportPlotData(QString file_path);
 
     Ui::AnalysisDialog *ui;
 
@@ -38,6 +41,11 @@ private:
     QtCharts::QChart *m_snr_plot;
     QtCharts::QChart *m_delay_plot;
     QtCharts::QChart *m_rice_plot;
+
+    QtCharts::QLineSeries *m_power_series;
+    QtCharts::QLineSeries *m_snr_series;
+    QtCharts::QLineSeries *m_delay_series;
+    QtCharts::QLineSeries *m_rice_series;
 };
 
 #endif // ANALYSISDIALOG_H

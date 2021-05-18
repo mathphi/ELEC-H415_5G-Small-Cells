@@ -194,6 +194,9 @@ QDir MainWindow::lastUsedDirectory() {
 }
 
 void MainWindow::setLastUsedDirectory(QDir dir) {
+    if (!dir.exists())
+        return;
+
     g_last_used_dir = dir;
 }
 
@@ -1020,7 +1023,7 @@ void MainWindow::actionOpen() {
     }
 
     // Set the last used directory
-    MainWindow::setLastUsedDirectory(file_path);
+    MainWindow::setLastUsedDirectory(QFileInfo(file_path).dir());
 
     // Open the file (reading)
     QFile file(file_path);
@@ -1084,7 +1087,7 @@ void MainWindow::actionSave() {
     }
 
     // Set the last used directory
-    MainWindow::setLastUsedDirectory(file_path);
+    MainWindow::setLastUsedDirectory(QFileInfo(file_path).dir());
 
     // If the file hasn't the right extention -> add it
     if (file_path.split('.').last() != FILE_EXTENSION) {
@@ -1470,6 +1473,9 @@ void MainWindow::simulationControlAction() {
                 return;
             }
 
+            // Reset the computed data
+            m_simulation_handler->resetComputedData();
+
             // Generate the receivers on the analysis line
             m_analysis_line->createReceivers((AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt());
 
@@ -1508,7 +1514,7 @@ void MainWindow::exportSimulationAction() {
     }
 
     // Set the last used directory
-    MainWindow::setLastUsedDirectory(file_path);
+    MainWindow::setLastUsedDirectory(QFileInfo(file_path).dir());
 
     // Prepare an image with the double resolution of the scene
     QImage image(ui->graphicsView->sceneRect().size().toSize()*2, QImage::Format_ARGB32);

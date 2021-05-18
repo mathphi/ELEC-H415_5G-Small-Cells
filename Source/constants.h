@@ -42,5 +42,8 @@ vector<complex> operator*=(vector<complex> &v1, const vector<complex> v2) ;
 // Dot product basic function. Applicable on two 3-dimensional vectors.
 complex dotProduct(const vector<complex> v1, const vector<complex> v2);
 
+// The Sinc Function
+double sinc(double x);
+
 
 #endif // CONSTANTS_H

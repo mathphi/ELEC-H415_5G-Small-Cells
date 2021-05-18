@@ -513,7 +513,7 @@ void Receiver::generateResultsTooltip() {
         double hr_ds = SimulationData::delayToHumanReadable(delaySpread(), &units);
         tip_str.append(QString("<br><b>Delay spread: </b>%1&nbsp;%2").arg(hr_ds, 0, 'f', 2).arg(units));
     }
-    if (!isnan(rice_factor)) {
+    if (!isnan(rice_factor) && !isinf(rice_factor)) {
         tip_str.append(QString("<br><b>Rice factor: </b>%1&nbsp;dB").arg(rice_factor, 0, 'f', 2));
     }
 

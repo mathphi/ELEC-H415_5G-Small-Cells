@@ -58,6 +58,9 @@ void AnalysisLine::deleteReceivers() {
  * This function creates a list of receivers distributed along the line
  */
 void AnalysisLine::createReceivers(AntennaType::AntennaType ant_type) {
+    // Delete previous receivers (if one)
+    deleteReceivers();
+
     // Get the real total length of the line (in meters)
     double real_length = m_analysis_line.length() / simulationScene()->simulationScale();
 

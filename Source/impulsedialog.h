@@ -39,6 +39,9 @@ private:
     QMap<double,complex> computeTDLImpulse();
     QMap<double,complex> computeUncorrelatedTDLImpulse();
 
+    void exportPlotImage(QString file_path);
+    void exportPlotData(QString file_path);
+
     Ui::ImpulseDialog *ui;
     Receiver *m_receiver;
 };

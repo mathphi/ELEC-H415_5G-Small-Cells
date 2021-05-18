@@ -26,3 +26,11 @@ vector<complex> operator*=(vector<complex> &v1, const vector<complex> v2) {
 complex dotProduct(const vector<complex> v1, const vector<complex> v2) {
     return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
 }
+
+// The Sinc Function
+double sinc(double x) {
+    if (x == 0)
+        return 1;
+
+    return sin(x) / x;
+}
