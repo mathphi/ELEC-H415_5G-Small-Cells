@@ -623,15 +623,19 @@ void SimulationHandler::computeAllRays() {
  * This function computes all the rays arriving at the receiver r
  */
 void SimulationHandler::computeReceiverRays(Receiver *r) {
+    // No need to compute more if this receiver is already out of model
+    if (r->outOfModel())
+        return;
+
     // Loop over the emitters
-    foreach(Emitter *e, simulationData()->getEmittersList())
-    {
+    foreach(Emitter *e, m_emitters_list)
+    {        
         // Compute the straight line distance to the base station
         double bs_dist = QLineF(e->getRealPos(), r->getRealPos()).length();
 
         // Set this receiver as Out of Model
         if (bs_dist < simulationData()->getMinimumValidRadius()) {
-            r->setOutOfModel(true);
+            r->setOutOfModel(true, e);
             break;  // No need to compute it for other emitters
         }
 
@@ -740,6 +744,7 @@ void SimulationHandler::computationUnitFinished() {
             qDebug() << "Count:" << getRayPathsList().size();
             qDebug() << "Receivers:" << m_receivers_list.size();
             qDebug() << "Walls:" << m_wall_list.size();
+            qDebug() << "Corners:" << m_corners_list.size();
 
             // Set simulation done flag
             m_sim_done = true;
@@ -771,19 +776,41 @@ void SimulationHandler::computationUnitFinished() {
  * This function starts a computation of all rays to a list of receivers.
  * The simulation area is bounded by the sim_area rectangle.
  */
-void SimulationHandler::startSimulationComputation(QList<Receiver*> rcv_list, QRectF sim_area) {
+void SimulationHandler::startSimulationComputation(
+        QList<Receiver*> rcv_list,
+        QRectF sim_area,
+        bool reset,
+        QList<Emitter*> emit_list)
+{
     // Don't start a new computation if already running
     if (isRunning())
         return;
 
-    // Reset the previously computed data (if one)
-    resetComputedData();
+    // The reset flag is set by default
+    if (reset) {
+        // Reset the previously computed data (if one)
+        resetComputedData();
+    }
+
+    // Reset simulation done flag
+    m_sim_done = false;
 
     // Setup the receivers list
     m_receivers_list = rcv_list;
 
+    // Setup the emitters list
+    if (emit_list.isEmpty()) {
+        m_emitters_list = simulationData()->getEmittersList();
+    }
+    else {
+        m_emitters_list = emit_list;
+    }
+
     // Setup the simulation area
     m_sim_area = sim_area;
+
+
+    qDebug() << m_sim_area;
 
     // Create the walls list from the buildings list
     m_wall_list = simulationData()->makeBuildingWallsFiltered(m_sim_area);

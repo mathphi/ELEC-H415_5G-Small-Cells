@@ -5,7 +5,6 @@
 #include "simulationhandler.h"
 
 #include <QPainter>
-#include <QApplication>
 
 #define RECEIVER_AREA_SIZE      (1.0 * simulationScene()->simulationScale())
 #define RECEIVER_CROSS_SIZE     (4.0 * simulationScene()->simulationScale())
@@ -21,6 +20,7 @@ Receiver::Receiver(Antenna *antenna) : SimulationItem()
 
     // The receiver can be out of model if too close to an emitter
     m_out_of_model = false;
+    m_oom_emitter = nullptr;
 
     // The receiver is shaped or flat
     m_flat = false;
@@ -196,16 +196,33 @@ QList<RayPath*> Receiver::getRayPaths() {
     return m_received_rays;
 }
 
-void Receiver::setOutOfModel(bool out) {
-    if (out) {
-        // Delete all RayPaths from this receiver
-        foreach (RayPath *rp, m_received_rays) {
+void Receiver::discardEmitter(Emitter *e) {
+    // For every raypath
+    foreach(RayPath *rp, m_received_rays) {
+        // Remove this raypath if it is coming from the given emitter
+        if (rp->getEmitter() == e) {
+            m_received_rays.removeAll(rp);
             delete rp;
         }
-        m_received_rays.clear();
     }
 
+    // If this receiver was out of model due to this emitter
+    if (m_oom_emitter == e) {
+        // Reset the out of model flags
+        m_out_of_model = false;
+        m_oom_emitter = nullptr;
+    }
+
+    // Invalidate the previously computed data
+    m_received_power = NAN;
+    m_user_end_SNR   = NAN;
+    m_delay_spread   = NAN;
+    m_rice_factor    = NAN;
+}
+
+void Receiver::setOutOfModel(bool out, Emitter *e) {
     m_out_of_model = out;
+    m_oom_emitter = e;
 }
 
 bool Receiver::outOfModel() {
@@ -352,6 +369,20 @@ double Receiver::riceFactor() {
     m_rice_factor = 10*log10(los_val_sq/sum_ampl_sq);
 
     return m_rice_factor;
+}
+
+/**
+ * @brief Receiver::isCovered
+ * @return
+ *
+ * This function returns true if the SNR at this receiver is higher than the simulation target SNR.
+ */
+bool Receiver::isCovered() {
+    // If the receiver is out of model -> consider coverage OK (we are in the near-field)
+    if (outOfModel())
+        return true;
+
+    return userEndSNR() >= SimulationHandler::simulationData()->getSimulationTargetSNR();
 }
 
 
@@ -587,156 +618,3 @@ QDataStream &operator<<(QDataStream &out, Receiver *r) {
 }
 
 
-
-ReceiversArea::ReceiversArea() : QGraphicsRectItem(), SimulationItem()
-{
-    QGraphicsRectItem::setZValue(-10);
-}
-
-ReceiversArea::~ReceiversArea() {
-    deleteReceivers();
-}
-
-void ReceiversArea::getReceivedDataBounds(ResultType::ResultType type, double *min, double *max) const {
-    double val;
-
-    // Initialize max and min to extreme values
-    *min = qInf();
-    *max = -qInf();
-
-    foreach(Receiver *r, m_receivers_list) {
-        switch (type) {
-        case ResultType::Power:
-            val = r->receivedPower();
-
-            // Ignore zero-powers
-            if (val == 0)
-                continue;
-
-            break;
-        case ResultType::CoverageMap:
-        case ResultType::SNR:
-            val = r->userEndSNR();
-            break;
-        case ResultType::DelaySpread:
-            val = r->delaySpread();
-            break;
-        case ResultType::RiceFactor:
-            val = r->riceFactor();
-            break;
-        }
-
-        // Ignore non-numeric values
-        if (isnan(val) || isinf(val))
-            continue;
-
-        if (val > *max) {
-            *max = val;
-        }
-        else if (val < *min) {
-            *min = val;
-        }
-    }
-}
-
-QList<Receiver*> ReceiversArea::getReceiversList() const {
-    return m_receivers_list;
-}
-
-void ReceiversArea::setArea(AntennaType::AntennaType type, QRectF area) {
-    // Store the given area
-    m_area = area;
-
-    // Compute the area as a rect of size multiple of 1m²
-    qreal sim_scale = simulationScene()->simulationScale();
-
-    // Compute the 1m² fitted rect
-    QSizeF fit_size(round(area.width() / sim_scale) * sim_scale,
-                    round(area.height() / sim_scale) * sim_scale);
-
-    // Center the content in the area
-    QSizeF diff_sz = fit_size - area.size();
-    QRectF fit_area = area.adjusted(-diff_sz.width()/2, -diff_sz.height()/2,
-                                     diff_sz.width()/2,  diff_sz.height()/2);
-
-    // Draw the area rectangle
-    setPen(QPen(Qt::darkGray, 1, Qt::DashDotDotLine));
-    setBrush(QBrush(qRgba(225, 225, 255, 255), Qt::DiagCrossPattern));
-    QGraphicsRectItem::setRect(fit_area);
-
-    // Delete and recreate the receivers list
-    deleteReceivers();
-    createReceivers(type, fit_area);
-}
-
-QRectF ReceiversArea::getArea() {
-    return m_area;
-}
-
-void ReceiversArea::createReceivers(AntennaType::AntennaType type, QRectF area) {
-    if (!simulationScene())
-        return;
-
-    // Get the count of receivers in each dimension
-    QSize num_rcv = (area.size() / simulationScene()->simulationScale()).toSize();
-
-    // Get the initial position of the receivers
-    QPointF init_pos = area.topLeft() + QPointF(RECEIVER_AREA_SIZE/2, RECEIVER_AREA_SIZE/2);
-
-    // Add a receiver to each m² on the area
-    for (int y = 0 ; y < num_rcv.height() ; y++) {
-        for (int x = 0 ; x < num_rcv.width() ; x++) {
-            QPointF delta_pos(x * RECEIVER_AREA_SIZE, y * RECEIVER_AREA_SIZE);
-            QPointF rcv_pos = init_pos + delta_pos;
-
-            bool overlap_building = false;
-
-            // Check if this receiver overlaps a building
-            foreach(Building *b, SimulationHandler::simulationData()->getBuildingsList()) {
-                // If the position is overlapped by a building -> don't place a receiver
-                if (b->getRect().contains(rcv_pos)) {
-                    // Go to the end of this building
-                    x = (b->getRect().right() - init_pos.x()) / simulationScene()->simulationScale();
-                    overlap_building = true;
-                    break;
-                }
-            }
-
-            // Skip this position if overlapping with building
-            if (overlap_building)
-                continue;
-
-            Receiver *rcv = new Receiver(type, 1.0);
-            simulationScene()->addItem(rcv);
-
-            rcv->setFlat(true);
-            rcv->setPos(rcv_pos);
-
-            m_receivers_list.append(rcv);
-        }
-
-        // Avoid freezing the UI
-        qApp->processEvents();
-    }
-}
-
-void ReceiversArea::deleteReceivers() {
-    foreach(Receiver *r, m_receivers_list) {
-        delete r;
-    }
-
-    m_receivers_list.clear();
-}
-
-
-QRectF ReceiversArea::boundingRect() const {
-    return QGraphicsRectItem::boundingRect();
-}
-
-QPainterPath ReceiversArea::shape() const {
-    return QGraphicsRectItem::shape();
-}
-
-void ReceiversArea::paint(QPainter *p, const QStyleOptionGraphicsItem *s, QWidget *w) {
-    QGraphicsRectItem::paint(p, s, w);
-}

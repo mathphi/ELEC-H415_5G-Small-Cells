@@ -291,18 +291,18 @@ void Emitter::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget
 
 QDataStream &operator>>(QDataStream &in, Emitter *&e) {
     Antenna *ant;
-    double power;
+    double eirp;
     double frequency;
     double rotation;
     QPoint pos;
 
     in >> ant;
-    in >> power;
+    in >> eirp;
     in >> frequency;
     in >> rotation;
     in >> pos;
 
-    e = new Emitter(frequency, power, ant);
+    e = new Emitter(frequency, eirp, ant);
     e->setRotation(rotation);
     e->setPos(pos);
 
@@ -311,7 +311,7 @@ QDataStream &operator>>(QDataStream &in, Emitter *&e) {
 
 QDataStream &operator<<(QDataStream &out, Emitter *e) {
     out << e->getAntenna();
-    out << e->getPower();
+    out << e->getEIRP();
     out << e->getFrequency();
     out << e->getRotation();
     out << e->pos().toPoint();

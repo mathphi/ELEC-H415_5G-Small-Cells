@@ -14,7 +14,8 @@ namespace SimType {
 enum SimType : int {
     PointReceiver   = 0,
     AreaReceiver    = 1,
-    Analysis1D      = 2
+    Analysis1D      = 2,
+    CoverageOptim   = 3
 };
 }
 
@@ -42,6 +43,7 @@ public:
     void detachReceiver(Receiver *r);
 
     void reset();
+    void resetDefaults();
 
     QList<Wall*> makeBuildingWallsFiltered(const QRectF boundary_rect) const;
     QList<Wall*> makeBuildingWallsList() const;

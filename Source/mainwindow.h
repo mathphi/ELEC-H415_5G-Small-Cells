@@ -10,6 +10,7 @@
 #include "simulationscene.h"
 #include "simulationhandler.h"
 #include "analysisline.h"
+#include "simulationarea.h"
 
 namespace DrawActions {
 enum DrawActions {
@@ -60,6 +61,7 @@ public slots:
     void addEmitter();
     void addReceiver();
 
+    void createNewMap();
     void actionOpen();
     void actionSave();
 
@@ -96,7 +98,7 @@ private slots:
     void configureReceiver(Receiver *re);
 
     void switchSimulationMode();
-    void switchEditSceneMode();
+    void switchEditSceneMode(bool ask = true);
 
     void simulationTypeChanged();
     void receiversAntennaChanged();
@@ -154,7 +156,7 @@ private:
 
     bool m_dragging_view;
 
-    ReceiversArea *m_sim_area_item;
+    SimulationArea *m_sim_area_item;
     AnalysisLine *m_analysis_line;
 
     QButtonGroup *m_result_radio_grp;

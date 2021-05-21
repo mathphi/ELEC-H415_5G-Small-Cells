@@ -11,6 +11,7 @@
 #include "analysisline.h"
 #include "analysisdialog.h"
 #include "impulsedialog.h"
+#include "coverageoptimizer.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -113,6 +114,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(close()));
     connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(actionOpen()));
     connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(actionSave()));
+    connect(ui->actionNew,  SIGNAL(triggered()), this, SLOT(createNewMap()));
 
     // Window Edit menu actions
     connect(ui->actionAddBuilding,      SIGNAL(triggered()),     this, SLOT(addBuilding()));
@@ -999,7 +1001,44 @@ void MainWindow::setMouseTrackerPosition(QPoint pos) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/////////////////////////////// FILE SAVE/RESTORE HANDLING SECTION /////////////////////////////////
+//////////////////////////// PROJECT NEW/SAVE/RESTORE HANDLING SECTION /////////////////////////////
+
+void MainWindow::createNewMap() {
+    int answer = QMessageBox::question(
+                this,
+                "Confirmation",
+                "The current state of the simulation will be lost.\n"
+                "Do you want to continue?");
+
+    if (answer == QMessageBox::No) {
+        return;
+    }
+
+    // Clear all the current data
+    simulationReset();
+
+    // Delete the simulation area item and its receivers before to clear all items
+    if (m_sim_area_item != nullptr) {
+        delete m_sim_area_item;
+        m_sim_area_item = nullptr;
+    }
+
+    // Clear the scene (including buildings, emitters and receivers)
+    clearAllItems();
+
+    // Update UI
+    updateSimulationUI();
+    updateSimulationScene();
+
+    // Go to the edit mode (without asking)
+    switchEditSceneMode(false);
+
+    // Reset the simulation settings and parameters
+    SimulationHandler::simulationData()->resetDefaults();
+
+    // Reset the viewport
+    resetView();
+}
 
 void MainWindow::actionOpen() {
     int answer = QMessageBox::question(
@@ -1176,12 +1215,12 @@ void MainWindow::switchSimulationMode() {
     updateSceneRect();
 }
 
-void MainWindow::switchEditSceneMode() {
+void MainWindow::switchEditSceneMode(bool ask) {
     if (m_ui_mode == UIMode::EditorMode)
         return;
 
     // This will reset the simulation data if the user accepts
-    if (!askSimulationReset())
+    if (ask && !askSimulationReset())
         // Don't continue if user refused
         return;
 
@@ -1268,6 +1307,7 @@ void MainWindow::updateSimulationScene() {
             deleteAnalysisLine();
             break;
         }
+        case SimType::CoverageOptim:
         case SimType::AreaReceiver: {
             // Show waiting cursor (sim area generation may take a while)
             QCursor cur = cursor();
@@ -1328,7 +1368,7 @@ void MainWindow::createSimArea() {
 
     if (m_sim_area_item == nullptr) {
         // Create the area rectangle
-        m_sim_area_item = new ReceiversArea();
+        m_sim_area_item = new SimulationArea();
         m_scene->addItem((SimulationItem*) m_sim_area_item);
     }
 
@@ -1504,6 +1544,19 @@ void MainWindow::simulationControlAction() {
 
             QRectF area = m_scene->simulationBoundingRect();
             m_simulation_handler->startSimulationComputation(m_analysis_line->getReceiversList(), area);
+            break;
+        }
+        case SimType::CoverageOptim: {
+            // If there is no simulation area
+            if (m_sim_area_item == nullptr) {
+                // This wouldn't happen
+                return;
+            }
+
+            CoverageOptimizer optimizer(m_sim_area_item, 27*1e9, 2.0, AntennaType::HalfWaveDipoleVert);
+            optimizer.optimizeEmitters();
+
+            showResultHeatMap();
             break;
         }
         }
@@ -1690,6 +1743,7 @@ void MainWindow::showReceiversResult() {
         showResultsRays();
         break;
     }
+    case SimType::CoverageOptim:
     case SimType::AreaReceiver: {
         showResultHeatMap();
         break;

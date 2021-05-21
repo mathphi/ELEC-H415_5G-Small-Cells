@@ -17,6 +17,7 @@ SOURCES += \
     Source/computationunit.cpp \
     Source/constants.cpp \
     Source/corner.cpp \
+    Source/coverageoptimizer.cpp \
     Source/datalegenditem.cpp \
     Source/emitter.cpp \
     Source/emitterdialog.cpp \
@@ -28,6 +29,7 @@ SOURCES += \
     Source/receiverdialog.cpp \
     Source/scaleruleritem.cpp \
     Source/simsetupdialog.cpp \
+    Source/simulationarea.cpp \
     Source/simulationdata.cpp \
     Source/simulationhandler.cpp \
     Source/simulationitem.cpp \
@@ -43,6 +45,7 @@ HEADERS += \
     Source/computationunit.h \
     Source/constants.h \
     Source/corner.h \
+    Source/coverageoptimizer.h \
     Source/datalegenditem.h \
     Source/emitter.h \
     Source/emitterdialog.h \
@@ -53,6 +56,7 @@ HEADERS += \
     Source/receiverdialog.h \
     Source/scaleruleritem.h \
     Source/simsetupdialog.h \
+    Source/simulationarea.h \
     Source/simulationdata.h \
     Source/simulationhandler.h \
     Source/simulationitem.h \

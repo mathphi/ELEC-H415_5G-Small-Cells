@@ -53,14 +53,17 @@ public:
     void reset();
     void addRayPath(RayPath *rp);
     QList<RayPath*> getRayPaths();
+    void discardEmitter(Emitter *e);
 
-    void setOutOfModel(bool out);
+    void setOutOfModel(bool out, Emitter *e);
     bool outOfModel();
 
     double receivedPower();
     double userEndSNR();
     double delaySpread();
     double riceFactor();
+
+    bool isCovered();
 
     void showResults(ResultType::ResultType type, double min, double max);
 
@@ -82,9 +85,11 @@ private:
     double m_res_min;
     double m_res_max;
 
-    bool m_out_of_model;
     bool m_flat;
     bool m_show_result;
+
+    bool m_out_of_model;
+    Emitter *m_oom_emitter; // The receiver is out of model w.r.t. this emitter
 
     QMutex m_mutex;
 };
@@ -92,30 +97,5 @@ private:
 // Operator overload to write objects from the Receiver class into a files
 QDataStream &operator>>(QDataStream &in, Receiver *&r);
 QDataStream &operator<<(QDataStream &out, Receiver *r);
-
-
-class ReceiversArea : public QGraphicsRectItem, public SimulationItem
-{
-public:
-    ReceiversArea();
-    ~ReceiversArea();
-
-    void getReceivedDataBounds(ResultType::ResultType type, double *min, double *max) const;
-
-    QList<Receiver*> getReceiversList() const;
-    void setArea(AntennaType::AntennaType type, QRectF area);
-    QRectF getArea();
-
-    QRectF boundingRect() const override;
-    QPainterPath shape() const override;
-    void paint(QPainter *p, const QStyleOptionGraphicsItem *s, QWidget *w) override;
-
-private:
-    void createReceivers(AntennaType::AntennaType type, QRectF area);
-    void deleteReceivers();
-
-    QList<Receiver*> m_receivers_list;
-    QRectF m_area;
-};
 
 #endif // RECEIVER_H

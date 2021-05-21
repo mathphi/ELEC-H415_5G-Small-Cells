@@ -2,6 +2,7 @@
 #include "simulationitem.h"
 #include "scaleruleritem.h"
 #include "datalegenditem.h"
+#include "emitter.h"
 
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
@@ -42,8 +43,18 @@ QRectF SimulationScene::simulationBoundingRect() const {
         SimulationItem *s_i = dynamic_cast<SimulationItem*>(item);
 
         if (s_i) {
-            // Bounding rect is a rectangle containing bounding rects of all items
-            bounding_rect = bounding_rect.united(s_i->boundingRect().translated(s_i->pos()));
+            Emitter *e_i = dynamic_cast<Emitter*>(s_i);
+            Receiver *r_i = dynamic_cast<Receiver*>(s_i);
+
+            // If the item is an emitter or a receiver -> add it as a punctual item
+            if (e_i || r_i) {
+                QRectF unit_rect(s_i->pos(), QSizeF(1,1));
+                bounding_rect = bounding_rect.united(unit_rect);
+            }
+            else {
+                // Bounding rect is a rectangle containing bounding rects of all items
+                bounding_rect = bounding_rect.united(s_i->boundingRect().translated(s_i->pos()));
+            }
         }
     }
 

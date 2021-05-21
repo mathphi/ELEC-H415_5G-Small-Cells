@@ -61,7 +61,11 @@ public:
 
     void receiverRaysThreaded(QList<Receiver*> r_lst);
 
-    void startSimulationComputation(QList<Receiver *> rcv_list, QRectF sim_area);
+    void startSimulationComputation(
+            QList<Receiver *> rcv_list,
+            QRectF sim_area,
+            bool reset = true,
+            QList<Emitter*> emit_list = QList<Emitter*>());
     void stopSimulationComputation();
     void resetComputedData();
 
@@ -75,6 +79,7 @@ private slots:
     void computationUnitFinished();
 
 private:
+    QList<Emitter*> m_emitters_list;
     QList<Receiver*> m_receivers_list;
     QList<Wall*> m_wall_list;
     QList<Corner*> m_corners_list;

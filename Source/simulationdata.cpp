@@ -27,19 +27,8 @@
 
 SimulationData::SimulationData() : QObject()
 {
-    m_simulation_type = SimType::PointReceiver;
-
-    m_reflections_count = MAX_REFLECTIONS_COUNT_DEFAULT;
-    m_nlos_refl_en = false;
-
-    m_rel_permitivity   = DEFAULT_REL_PERMITIVITY;
-    m_simulation_height = DEFAULT_SIM_HEIGHT;
-    m_sim_bandwidth     = DEFAULT_SIM_BANDWIDTH * 1e6;
-    m_sim_temperature   = convertCelsiusToKelvin(DEFAULT_SIM_TEMPERATURE);
-    m_sim_noise_figure  = DEFAULT_SIM_NOISE_FIGURE;
-    m_sim_target_SNR    = DEFAULT_SIM_TARGET_SNR;
-    m_min_valid_radius  = DEFAULT_VALID_RADIUS;
-    m_pruning_radius    = DEFAULT_PRUNE_RADIUS;
+    // Initialize to defaults settings
+    resetDefaults();
 }
 
 // ---------------------------------------------------------------------------------------------- //
@@ -210,6 +199,22 @@ void SimulationData::reset() {
     m_building_list.clear();
     m_emitter_list.clear();
     m_receiver_list.clear();
+}
+
+void SimulationData::resetDefaults() {
+    m_simulation_type = SimType::PointReceiver;
+
+    m_reflections_count = MAX_REFLECTIONS_COUNT_DEFAULT;
+    m_nlos_refl_en      = false;
+
+    m_rel_permitivity   = DEFAULT_REL_PERMITIVITY;
+    m_simulation_height = DEFAULT_SIM_HEIGHT;
+    m_sim_bandwidth     = DEFAULT_SIM_BANDWIDTH * 1e6;
+    m_sim_temperature   = convertCelsiusToKelvin(DEFAULT_SIM_TEMPERATURE);
+    m_sim_noise_figure  = DEFAULT_SIM_NOISE_FIGURE;
+    m_sim_target_SNR    = DEFAULT_SIM_TARGET_SNR;
+    m_min_valid_radius  = DEFAULT_VALID_RADIUS;
+    m_pruning_radius    = DEFAULT_PRUNE_RADIUS;
 }
 
 QList<Wall*> SimulationData::makeBuildingWallsFiltered(const QRectF boundary_rect) const {

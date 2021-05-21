@@ -231,7 +231,7 @@
        <item>
         <widget class="QLabel" name="label_2">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the simulation results at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the simulation results over each m² of the simulation area.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;1-D analysis:&lt;/span&gt; Calculate the simulation results along a line drawn on the map.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the simulation results at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the simulation results over each m² of the simulation area.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;1-D analysis:&lt;/span&gt; Calculate the simulation results along a line drawn on the map.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Coverage optimization:&lt;/span&gt; Calculate the optimal distribution of emitters on the map in order to ensure a full coverage.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Simulation type*:</string>
@@ -241,7 +241,7 @@
        <item>
         <widget class="QComboBox" name="combobox_simType">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the simulation results at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the simulation results over each m² of the simulation area.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;1-D analysis:&lt;/span&gt; Calculate the simulation results along a line drawn on the map.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Point receivers:&lt;/span&gt; Calculate the simulation results at the receivers placed on the plan.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Total coverage:&lt;/span&gt; Calculate the simulation results over each m² of the simulation area.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;1-D analysis:&lt;/span&gt; Calculate the simulation results along a line drawn on the map.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Coverage optimization:&lt;/span&gt; Calculate the optimal distribution of emitters on the map in order to ensure a full coverage.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <item>
           <property name="text">
@@ -256,6 +256,11 @@
          <item>
           <property name="text">
            <string>1-D analysis</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Coverage optimization</string>
           </property>
          </item>
         </widget>
@@ -669,6 +674,8 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionNew"/>
+    <addaction name="separator"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="separator"/>
@@ -814,6 +821,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Alt+S</string>
+   </property>
+  </action>
+  <action name="actionNew">
+   <property name="text">
+    <string>Create a new map</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
    </property>
   </action>
  </widget>
