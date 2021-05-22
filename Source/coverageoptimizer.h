@@ -42,7 +42,7 @@ private:
     bool isCoveredAt(QPoint pos);
 
     Receiver *getReceiverAt(QPoint pos);
-    double getPositionCostFunction(QPointF pos);
+    double getPositionScore(QPointF pos);
     QPointF getPlaceableCornerPosition(Corner *c);
 
 

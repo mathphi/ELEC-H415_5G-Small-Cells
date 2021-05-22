@@ -141,8 +141,7 @@ bool SimulationHandler::checkIntersections(
         }
 
         // Get the intersection point
-        QPointF pt;
-        QLineF::IntersectionType i_t = ray.intersects(w->getRealLine(), &pt);
+        QLineF::IntersectionType i_t = ray.intersects(w->getRealLine(), nullptr);
 
         // There is obscursion if the intersection with the ray is
         // on the wall (not on its extension)
@@ -287,12 +286,6 @@ RayPath *SimulationHandler::computeRayPath(
         // Compute the virtual ray (line from the image to te target point)
         QLineF virtual_ray (src_image, target_point);
 
-        // If this is the virtual ray from the last image to the receiver,
-        // it length is the total ray path length dn.
-        if (src_image == images.last()) {
-            dn = virtual_ray.length();
-        }
-
         // Get the reflection point (intersection of the virtual ray and the wall)
         QPointF reflection_pt;
         QLineF::IntersectionType i_t =
@@ -315,6 +308,12 @@ RayPath *SimulationHandler::computeRayPath(
         // If this ray intersects a wall -> neglected
         if (checkIntersections(ray, reflect_wall, target_wall)) {
             return nullptr;
+        }
+
+        // If this is the virtual ray from the last image to the receiver,
+        // it length is the total ray path length dn.
+        if (src_image == images.last()) {
+            dn = virtual_ray.length();
         }
 
         // Compute the reflection coefficient for this reflection
@@ -426,14 +425,14 @@ void SimulationHandler::recursiveReflection(
 
 
 /**
- * @brief SimulationHandler::computeDiffraction
+ * @brief SimulationHandler::computeDiffractedRay
  * @param e
  * @param r
  * @param c
  *
  * This function computes the diffracted ray from an emitter to a receiver via the corner c.
  */
-void SimulationHandler::computeDiffraction(Emitter *e, Receiver *r, Corner *c) {
+void SimulationHandler::computeDiffractedRay(Emitter *e, Receiver *r, Corner *c) {
     // If the target point is the same as the emitter point
     //  -> not a physics situation -> invalid raypath
     if (e->getRealPos() == r->getRealPos()) {
@@ -476,8 +475,8 @@ void SimulationHandler::computeDiffraction(Emitter *e, Receiver *r, Corner *c) {
         rv_angle = 360 - rv_angle;
     }
 
-    // Check if one of this angle is > 90° -> not a valid diffraction
-    if (em_angle > 90 || rv_angle > 90) {
+    // Check if one of this angle is > 90° and the sum of both > 90° -> not a valid diffraction
+    if (em_angle > 90 || rv_angle > 90 || em_angle+rv_angle > 90) {
         return;
     }
 
@@ -571,9 +570,9 @@ void SimulationHandler::computeGroundReflection(Emitter *e, Receiver *r) {
 
     // Return as a 3-D vector
     vector<complex> refl_coef {
-        Gamma_para,
-        Gamma_para,
-        Gamma_orth
+        Gamma_orth,
+        Gamma_orth,
+        Gamma_para
     };
 
     // The multiplication is made component by component (not a cross product).
@@ -673,7 +672,7 @@ void SimulationHandler::computeReceiverRays(Receiver *r) {
         if (LOS == nullptr) {
             // For each corner of the scene
             foreach(Corner *c, m_corners_list) {
-                computeDiffraction(e, r, c);
+                computeDiffractedRay(e, r, c);
             }
         }
     }

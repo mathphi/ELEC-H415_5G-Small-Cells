@@ -84,6 +84,7 @@ bool CoverageOptimizer::optimizeEmitters(
     qDebug() << "OPTIMIZATION STARTED:";
     qDebug() << "Min. coverage:" << m_cover_threshold;
     qDebug() << "Coverage margin:" << m_fade_margin;
+    qDebug() << "Receivers:" << m_receivers_map.size();
     qDebug() << "Walls:" << m_walls_list.size();
     qDebug() << "Corners:" << m_available_corners.size();
 
@@ -106,6 +107,7 @@ bool CoverageOptimizer::optimizeEmitters(
     m_elapsed_time = tmr.nsecsElapsed() / 1.0e9;
 
     qDebug() << "OPTIMIZATION FINISHED";
+    qDebug() << "Total processing time:" << m_elapsed_time << "s";
 
     return m_optimized;
 }
@@ -118,11 +120,11 @@ bool CoverageOptimizer::optimizeEmitters(
  * first non-covered area found.
  */
 void CoverageOptimizer::runOptimizationIteration() {
-    // -> Kor each corner (not excluded), compute a cost function:
+    // -> Kor each corner (not excluded), compute a score:
     //        sum 1/(1+dist) over all the uncovered receivers of the map
     //    where dist is the distance between the corner and each receiver.
     //
-    // -> Keep the corner with highest cost function, place it in the
+    // -> Keep the corner with highest score, place it in the
     //    exluded corners list, and place an emitter on it.
     //
     // -> If this emitter improved the coverage -> keep it
@@ -136,22 +138,16 @@ void CoverageOptimizer::runOptimizationIteration() {
 
     qDebug() << "Init coverage:" << cover_ratio << "/" << m_cover_threshold;
 
-    // Best position
-    QPointF best_pos;
+    // Buffer to get the maximum score
+    double max_score     = 0;
 
-    // Buffer to get the maximum cost function
-    double max_cost     = 0;
-    double max_cost_cov = 0;
+    // Pointer to the corner position with maximum score
+    Corner *max_score_corner;
 
-    // Pointer to the corner position with maximum cost function
-    Corner *max_cost_corner;
-    Corner *max_cost_corner_cov;
+    // Placeable corner position with maximum score
+    QPointF max_score_pos;
 
-    // Placeable corner position with maximum cost function
-    QPointF max_cost_pos;
-    QPointF max_cost_pos_cov;
-
-    // Search the corner with highest cost function on a position
+    // Search the corner with highest score on a position
     foreach (Corner *c, m_available_corners) {
         // Get the placeable position at this corner
         QPointF c_place_pos = getPlaceableCornerPosition(c);
@@ -169,53 +165,35 @@ void CoverageOptimizer::runOptimizationIteration() {
             continue;
         }
 
-        // Get the cost function for this corner
-        double cost = getPositionCostFunction(c_place_pos);
+        // Get the score for this corner
+        double score = getPositionScore(c_place_pos);
 
-        // Keep the best covered corner
-        if (r->isCovered(m_fade_margin)) {
-            if (max_cost_cov < cost) {
-                max_cost_cov        = cost;
-                max_cost_pos_cov    = c_place_pos;
-                max_cost_corner_cov = c;
-            }
-        }
-        // Keep the best uncovered corner
-        else {
-            if (max_cost < cost) {
-                max_cost        = cost;
-                max_cost_pos    = c_place_pos;
-                max_cost_corner = c;
-            }
+        // Keep the best corner
+        if (max_score < score) {
+            max_score        = score;
+            max_score_pos    = c_place_pos;
+            max_score_corner = c;
         }
     }
 
-    qDebug() << "Best cost:" << max_cost << max_cost_pos;
-    qDebug() << "Best cost covered:" << max_cost_cov << max_cost_pos_cov;
+    qDebug() << "Best score:" << max_score << "@" << max_score_pos;
 
-    // Keep the best placement position (prefer uncovered positions)
-    if (max_cost > 0) {
-        // Keep the best uncovered position if one has been found
-        best_pos = max_cost_pos;
-        m_available_corners.removeAll(max_cost_corner);
-    }
-    else if (max_cost_cov > 0) {
-        // Keep the best covered position if one has been found
-        best_pos = max_cost_pos_cov;
-        m_available_corners.removeAll(max_cost_corner_cov);
-    }
-    else {
-        // If no free corner was found -> stop
+
+    // If no free corner was found -> stop
+    if (max_score == 0) {
         m_optimized = true;
         m_finished = true;
         return;
     }
 
-    qDebug() << "Emitter pos:" << best_pos;
+    // Set the best placement position found as occupied
+    m_available_corners.removeAll(max_score_corner);
+
+    qDebug() << "Emitter pos:" << max_score_pos;
 
     // Create a new test emitter
     Emitter *emit_test = new Emitter(m_emit_freq, m_emit_eirp, 1.0, m_emit_ant_type);
-    emit_test->setPos(best_pos * SimulationScene::simulationScale());
+    emit_test->setPos(max_score_pos * SimulationScene::simulationScale());
     m_sim_area->addPlacedEmitter(emit_test);
 
     // Start the simulation for this emitter only, without resetting the previous results
@@ -336,16 +314,21 @@ Receiver *CoverageOptimizer::getReceiverAt(QPoint pos) {
 }
 
 /**
- * @brief CoverageOptimizer::getCornerCostFunction
+ * @brief CoverageOptimizer::getCornerScore
  * @param c
  * @return
  *
- * This function computes the cost function for the given corner
+ * This function computes the score for the given corner
  */
-double CoverageOptimizer::getPositionCostFunction(QPointF pos) {
-    // Init cost to zero
-    double cost = 0;
+double CoverageOptimizer::getPositionScore(QPointF pos) {
+    // Init score to zero
+    double score = 0;
+
+    // Temp vars
+    double ampl_factor;
     double dist;
+    QLineF direct_line;
+    QLineF::IntersectionType intersect_type;
 
     // Loop over each receiver and take the uncovered ones into account
     foreach (Receiver *r, m_receivers_map) {
@@ -353,14 +336,32 @@ double CoverageOptimizer::getPositionCostFunction(QPointF pos) {
         if (r->isCovered(m_fade_margin))
             continue;
 
-        // Get the distance to this receiver
-        dist = QLineF(r->getRealPos(), pos).length();
+        // Get the direct line between given position and receiver
+        direct_line = QLineF(r->getRealPos(), pos);
 
-        // Add this receiver to the cost function
-        cost += 1 / (1 + dist);
+        // If the direct line is free of obstacle -> amplification factor = 100
+        ampl_factor = 100.0;
+
+        // Search for an obstacle for this line
+        foreach (Wall *w, m_walls_list) {
+            // Get the intersection type
+            intersect_type = direct_line.intersects(w->getRealLine(), nullptr);
+
+            // Amplification factor is 1 if the line is obstructed
+            if (intersect_type == QLineF::BoundedIntersection) {
+                ampl_factor = 1.0;
+                break;
+            }
+        }
+
+        // Get the distance to this receiver
+        dist = direct_line.length();
+
+        // Add this receiver to the score
+        score += ampl_factor / (1 + dist);
     }
 
-    return cost;
+    return score;
 }
 
 QPointF CoverageOptimizer::getPlaceableCornerPosition(Corner *c) {

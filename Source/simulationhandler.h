@@ -53,7 +53,7 @@ public:
             QList<Wall*> walls = QList<Wall*>(),
             int level = 1);
 
-    void computeDiffraction(Emitter *e, Receiver *r, Corner *c);
+    void computeDiffractedRay(Emitter *e, Receiver *r, Corner *c);
     void computeGroundReflection(Emitter *e, Receiver *r);
 
     void computeAllRays();

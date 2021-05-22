@@ -251,6 +251,7 @@ double Receiver::receivedPower() {
     // Implementation of equation 3.51
     complex sum = 0;
 
+    // For each received rays
     foreach (RayPath *rp, m_received_rays) {
         // Incidence angle of the ray to the receiver (first ray in the list)
         double phi = getIncidentRayAngle(rp->getRays().at(0));
