@@ -151,6 +151,7 @@ void Receiver::reset() {
         delete rp;
     }
     m_received_rays.clear();
+    m_attached_emitters.clear();
 
     m_received_power = NAN;
     m_user_end_SNR   = NAN;
@@ -188,6 +189,9 @@ void Receiver::addRayPath(RayPath *rp) {
     m_delay_spread   = NAN;
     m_rice_factor    = NAN;
 
+    // Insert the source emitter (if not present yet)
+    m_attached_emitters.insert(rp->getEmitter());
+
     // Unlock the mutex to allow others threads to write
     m_mutex.unlock();
 }
@@ -197,6 +201,10 @@ QList<RayPath*> Receiver::getRayPaths() {
 }
 
 void Receiver::discardEmitter(Emitter *e) {
+    // Ignore if no rays come from this emitter
+    if (!m_attached_emitters.contains(e))
+        return;
+
     // For every raypath
     foreach(RayPath *rp, m_received_rays) {
         // Remove this raypath if it is coming from the given emitter
@@ -303,7 +311,7 @@ double Receiver::userEndSNR() {
  */
 double Receiver::delaySpread() {
     // No delay spread if more than one emitter or if less than two rays
-    if (SimulationHandler::simulationData()->getEmittersList().size() != 1 ||
+    if (m_attached_emitters.size() != 1 ||
             m_received_rays.size() < 2) {
         return NAN;
     }
@@ -342,7 +350,7 @@ double Receiver::delaySpread() {
  */
 double Receiver::riceFactor() {
     // No rice factor if more than one emitter or if less than two rays
-    if (SimulationHandler::simulationData()->getEmittersList().size() != 1 ||
+    if (m_attached_emitters.size() != 1 ||
             m_received_rays.size() < 2) {
         return NAN;
     }
@@ -373,16 +381,18 @@ double Receiver::riceFactor() {
 
 /**
  * @brief Receiver::isCovered
+ * @param coverage_margin
  * @return
  *
  * This function returns true if the SNR at this receiver is higher than the simulation target SNR.
+ * It also takes into account the given coverage margin (fade margin).
  */
-bool Receiver::isCovered() {
+bool Receiver::isCovered(double coverage_margin) {
     // If the receiver is out of model -> consider coverage OK (we are in the near-field)
     if (outOfModel())
         return true;
 
-    return userEndSNR() >= SimulationHandler::simulationData()->getSimulationTargetSNR();
+    return userEndSNR() - coverage_margin >= SimulationHandler::simulationData()->getSimulationTargetSNR();
 }
 
 
@@ -481,7 +491,7 @@ void Receiver::paintFlat(QPainter *painter) {
 
     QColor background_color;
 
-    if (data != 0 && !isinf(data) && !isnan(data) && !outOfModel() && !(data < m_res_min)) {
+    if (!isinf(data) && !isnan(data) && !outOfModel() && !(data < m_res_min)) {
         double data_ratio = (data - m_res_min) / (m_res_max - m_res_min);
 
         // Use the light color profile

@@ -5,27 +5,20 @@
 #include <QApplication>
 #include <QDebug>
 
-#define CORNER_OFFSET_DIST      2.5     // Meters
-#define MINIMUM_EMIT_DISTANCE   20.0    // Meters
-#define COVERAGE_THRESHOLD      0.99    // Coverage ratio
+#define CORNER_OFFSET_DIST  2   // Meters
 
 
 CoverageOptimizer::CoverageOptimizer(
+        SimulationHandler *sim_handler,
         SimulationArea *rcv_area,
-        double emitter_freq,
-        double emitter_eirp,
-        AntennaType::AntennaType emitter_antenna,
         QObject *parent)
     : QObject(parent)
 {
     // Store the pointer to the receivers area
     m_sim_area = rcv_area;
-    m_emit_freq = emitter_freq;
-    m_emit_eirp = emitter_eirp;
-    m_emit_ant_type = emitter_antenna;
 
-    // Init the dedicated simulation handler
-    m_simulation_handler = new SimulationHandler;
+    // Store the pointer to the simulation handler
+    m_simulation_handler = sim_handler;
 
     // Initialize attributes
     m_optimized = false;
@@ -42,15 +35,13 @@ CoverageOptimizer::CoverageOptimizer(
 }
 
 CoverageOptimizer::~CoverageOptimizer() {
-    delete m_simulation_handler;
-}
-
-void CoverageOptimizer::deletePlacedEmitters() {
-    foreach (Emitter *e, m_placed_emitters) {
-        delete e;
+    foreach (Wall *w, m_walls_list) {
+        delete w;
     }
 
-    m_placed_emitters.clear();
+    foreach (Corner *c, m_corners_list) {
+        delete c;
+    }
 }
 
 /**
@@ -60,39 +51,63 @@ void CoverageOptimizer::deletePlacedEmitters() {
  * This function runs a complete optimization for emitters
  * placement.
  */
-void CoverageOptimizer::optimizeEmitters() {
-    // Delete the placed emitters (if one)
-    deletePlacedEmitters();
+bool CoverageOptimizer::optimizeEmitters(
+        double cover_thrld,
+        double fade_margin,
+        double emitter_freq,
+        double emitter_eirp,
+        double emitter_eff,
+        AntennaType::AntennaType emitter_antenna)
+{
+    // Store the parameters
+    m_fade_margin = fade_margin;
+    m_cover_threshold = cover_thrld;
+    m_emit_freq = emitter_freq;
+    m_emit_eirp = emitter_eirp;
+    m_emit_eff  = emitter_eff;
+    m_emit_ant_type = emitter_antenna;
+
+    // Remove the previously placed emitters (if one)
+    m_sim_area->deletePlacedEmitters();
 
     // Initialize attributes
     m_optimized = false;
-    m_excluded_corners.clear();
+    m_finished = false;
     m_placed_emitters.clear();
+
+    // Initially, all corners are availables
+    m_available_corners = m_corners_list;
 
     // Reset the computation handler
     m_simulation_handler->resetComputedData();
 
+    qDebug() << "OPTIMIZATION STARTED:";
+    qDebug() << "Min. coverage:" << m_cover_threshold;
+    qDebug() << "Coverage margin:" << m_fade_margin;
+    qDebug() << "Walls:" << m_walls_list.size();
+    qDebug() << "Corners:" << m_available_corners.size();
+
+    // Restart the elapsed timer counter
+    m_elapsed_time = 0;
+    QElapsedTimer tmr;
+    tmr.start();
+
     // If there is no corner in the map -> return an empty emitters list
     if (m_corners_list.size() == 0) {
-        return;
+        return true;
     }
 
     // Iterate until the coverage is optimal
-    while (!m_optimized) {
+    while (!m_finished) {
         runOptimizationIteration();
-
-
-        double min, max;
-        m_sim_area->getReceivedDataBounds(ResultType::CoverageMap, &min, &max);
-
-        // Loop over every receiver and show its results
-        foreach(Receiver *re, m_sim_area->getReceiversList())
-        {
-            // Show the results of each receiver
-            re->showResults(ResultType::CoverageMap, min, max);
-        }
-        m_sim_area->simulationScene()->showDataLegend(ResultType::CoverageMap, min, max);
     }
+
+    // Store the elapsed time
+    m_elapsed_time = tmr.nsecsElapsed() / 1.0e9;
+
+    qDebug() << "OPTIMIZATION FINISHED";
+
+    return m_optimized;
 }
 
 /**
@@ -103,49 +118,105 @@ void CoverageOptimizer::optimizeEmitters() {
  * first non-covered area found.
  */
 void CoverageOptimizer::runOptimizationIteration() {
+    // -> Kor each corner (not excluded), compute a cost function:
+    //        sum 1/(1+dist) over all the uncovered receivers of the map
+    //    where dist is the distance between the corner and each receiver.
+    //
+    // -> Keep the corner with highest cost function, place it in the
+    //    exluded corners list, and place an emitter on it.
+    //
+    // -> If this emitter improved the coverage -> keep it
+    //    Else -> discard it and its rays.
+    //
+    // -> Continue until the coverage is over the threshold or until there
+    //    is no more available corners.
+
     // Compute the initial coverage ratio
-    double cover_ratio = totalCoverageRatio();
+    double cover_ratio = totalCoverageRatio(m_fade_margin);
 
-    // Pointer to the found corner
-    Corner *found_corner = nullptr;
+    qDebug() << "Init coverage:" << cover_ratio << "/" << m_cover_threshold;
 
-    // Search for a non-covered receiver
-    foreach (QPoint pos, m_receivers_map.keys()) {
+    // Best position
+    QPointF best_pos;
+
+    // Buffer to get the maximum cost function
+    double max_cost     = 0;
+    double max_cost_cov = 0;
+
+    // Pointer to the corner position with maximum cost function
+    Corner *max_cost_corner;
+    Corner *max_cost_corner_cov;
+
+    // Placeable corner position with maximum cost function
+    QPointF max_cost_pos;
+    QPointF max_cost_pos_cov;
+
+    // Search the corner with highest cost function on a position
+    foreach (Corner *c, m_available_corners) {
+        // Get the placeable position at this corner
+        QPointF c_place_pos = getPlaceableCornerPosition(c);
+
+        // Get the relative position of this corner
+        QPoint c_place_rel = QPointF(c_place_pos - m_real_sim_rect.topLeft()).toPoint();
+
         // Receiver at this positions
-        Receiver *r = m_receivers_map.value(pos);
+        Receiver *r = m_receivers_map.value(c_place_rel);
 
-        // Skip this position if already covered
-        if (r->isCovered())
-            continue;
-
-        // If this receiver is not covered, place an emitter on the closest corner
-        Corner *c = getClosestFreeCorner(pos);
-
-        // Check if this corner was already excluded
-        if (m_excluded_corners.contains(c)) {
+        // Check if there is a receiver at this position
+        if (!r) {
+            // This shouldn't happen
+            qDebug() << "RCVPOS ERROR";
             continue;
         }
 
-        // Cancel the loop if we found a corner
-        found_corner = c;
-        break;
+        // Get the cost function for this corner
+        double cost = getPositionCostFunction(c_place_pos);
+
+        // Keep the best covered corner
+        if (r->isCovered(m_fade_margin)) {
+            if (max_cost_cov < cost) {
+                max_cost_cov        = cost;
+                max_cost_pos_cov    = c_place_pos;
+                max_cost_corner_cov = c;
+            }
+        }
+        // Keep the best uncovered corner
+        else {
+            if (max_cost < cost) {
+                max_cost        = cost;
+                max_cost_pos    = c_place_pos;
+                max_cost_corner = c;
+            }
+        }
     }
 
-    // If no free corner was found -> stop
-    if (!found_corner) {
+    qDebug() << "Best cost:" << max_cost << max_cost_pos;
+    qDebug() << "Best cost covered:" << max_cost_cov << max_cost_pos_cov;
+
+    // Keep the best placement position (prefer uncovered positions)
+    if (max_cost > 0) {
+        // Keep the best uncovered position if one has been found
+        best_pos = max_cost_pos;
+        m_available_corners.removeAll(max_cost_corner);
+    }
+    else if (max_cost_cov > 0) {
+        // Keep the best covered position if one has been found
+        best_pos = max_cost_pos_cov;
+        m_available_corners.removeAll(max_cost_corner_cov);
+    }
+    else {
+        // If no free corner was found -> stop
         m_optimized = true;
+        m_finished = true;
         return;
     }
 
-    // Get the placement position for the tested emitter
-    QPointF em_pos = getPlaceableCornerPosition(found_corner);
-
-    qDebug() << "Emitter pos:" << em_pos;
+    qDebug() << "Emitter pos:" << best_pos;
 
     // Create a new test emitter
     Emitter *emit_test = new Emitter(m_emit_freq, m_emit_eirp, 1.0, m_emit_ant_type);
-    emit_test->setPos(em_pos * SimulationScene::simulationScale());
-
+    emit_test->setPos(best_pos * SimulationScene::simulationScale());
+    m_sim_area->addPlacedEmitter(emit_test);
 
     // Start the simulation for this emitter only, without resetting the previous results
     m_simulation_handler->startSimulationComputation(
@@ -154,22 +225,42 @@ void CoverageOptimizer::runOptimizationIteration() {
                 false,
                 QList<Emitter*>() << emit_test);
 
+    // Elapsed timer to refresh the map regularily
+    QElapsedTimer tmr;
+    tmr.start();
+
     // Wait until the computation is done
     while (!m_simulation_handler->isDone()) {
+        // If the simulation is not running anymore -> it was canceled
+        if (!m_simulation_handler->isRunning() && !m_simulation_handler->isDone()) {
+            m_finished = true;
+            qDebug() << "OPTIMIZATION CANCELED";
+            return;
+        }
+
         qApp->processEvents();
+
+        // Update all receivers at each second
+        if (tmr.elapsed() > 1000.0) {
+            foreach (Receiver *r, m_receivers_map) {
+                r->update();
+            }
+
+            // Reset the timer counter
+            tmr.restart();
+        }
     }
 
     // Compute the new coverage ratio
-    double new_coverage_ratio = totalCoverageRatio();
+    double new_coverage_ratio = totalCoverageRatio(m_fade_margin);
 
-    qDebug() << "Coverage: " << new_coverage_ratio;
+    qDebug() << "New coverage:" << new_coverage_ratio << "/" << m_cover_threshold;
 
     // Check if the coverage ratio has been improved
     if (new_coverage_ratio > cover_ratio) {
         // If this emitter improved the coverage
         //  -> Keep it in the placed emitters list;
         m_placed_emitters.append(emit_test);
-        m_sim_area->addPlacedEmitter(emit_test);
     }
     else {
         // Else discard it and delete it and add this corner to banned list
@@ -179,18 +270,19 @@ void CoverageOptimizer::runOptimizationIteration() {
             r->discardEmitter(emit_test);
         }
 
+        // Remove it from the simulation area
+        m_sim_area->removePlacedEmitter(emit_test);
+
         // Delete the tested emitter
         delete emit_test;
     }
 
-    // Exclude this corner (it has no effect or it is occupied by an emitter)
-    m_excluded_corners.append(found_corner);
-
-    qDebug() << "post exclude" << m_excluded_corners.size() << m_corners_list.size();
+    qDebug() << "Remaining corners:" << m_available_corners.size() << "/" << m_corners_list.size();
 
     // Finally, check if we have a full coverage or if all the corners have been banned
-    if (new_coverage_ratio >= COVERAGE_THRESHOLD || m_excluded_corners.size() == m_corners_list.size()) {
+    if (new_coverage_ratio >= m_cover_threshold || m_available_corners.size() == 0) {
         m_optimized = true;
+        m_finished = true;
     }
 }
 
@@ -201,12 +293,12 @@ void CoverageOptimizer::runOptimizationIteration() {
  * This function returns the coverage ratio (number of covered receivers over
  * total number or receivers).
  */
-qreal CoverageOptimizer::totalCoverageRatio() {
+qreal CoverageOptimizer::totalCoverageRatio(double margin) {
     // Count the number of covered receivers
     int covered_count = 0;
 
     foreach(Receiver *r, m_sim_area->getReceiversList()) {
-        if (r->isCovered()) {
+        if (r->isCovered(margin)) {
             covered_count++;
         }
     }
@@ -229,7 +321,7 @@ bool CoverageOptimizer::isCoveredAt(QPoint pos) {
         return false;
     }
 
-    return r->isCovered();
+    return r->isCovered(m_fade_margin);
 }
 
 /**
@@ -244,71 +336,31 @@ Receiver *CoverageOptimizer::getReceiverAt(QPoint pos) {
 }
 
 /**
- * @brief CoverageOptimizer::getClosestFreeCorner
- * @param pos
+ * @brief CoverageOptimizer::getCornerCostFunction
+ * @param c
  * @return
  *
- * This function returns the free corner that is the clostest to the given pos.
+ * This function computes the cost function for the given corner
  */
-Corner *CoverageOptimizer::getClosestFreeCorner(QPoint pos) {
-    // Get the closest corner
-    double min_dist = INFINITY;
-    Corner *best_corner = nullptr;
+double CoverageOptimizer::getPositionCostFunction(QPointF pos) {
+    // Init cost to zero
+    double cost = 0;
+    double dist;
 
-    // Search for a corner which is not covered
-    foreach(Corner *c, m_corners_list) {
-        // Get the corner position relative to the simulation area
-        QPointF corner_pos = getPlaceableCornerPosition(c);
-        QPoint test_pos = QPointF(corner_pos - m_real_sim_rect.topLeft()).toPoint();
-        double dist = QLineF(test_pos, pos).length();
+    // Loop over each receiver and take the uncovered ones into account
+    foreach (Receiver *r, m_receivers_map) {
+        // Check if it is uncovered
+        if (r->isCovered(m_fade_margin))
+            continue;
 
-        bool min_dist_valid = true;
-        // Ignore this corner if it is too close to another placed emitter
-        foreach(Emitter *e, m_placed_emitters) {
-            // Get the distance between the emitter and the corner
-            double dist = QLineF(e->getRealPos(), c->getRealPos()).length();
+        // Get the distance to this receiver
+        dist = QLineF(r->getRealPos(), pos).length();
 
-            // Ignore this corner if too close to a placed emitter
-            if (dist < MINIMUM_EMIT_DISTANCE) {
-                min_dist_valid = false;
-            }
-        }
-
-        // Keep the closest non-covered corner
-        if (dist < min_dist && !isCoveredAt(test_pos) && !m_excluded_corners.contains(c) && min_dist_valid) {
-            min_dist = dist;
-            best_corner = c;
-
-            qDebug() << "UNCOVERED" << test_pos;
-        }
+        // Add this receiver to the cost function
+        cost += 1 / (1 + dist);
     }
 
-    // If we found a corner -> return it
-    if (best_corner) {
-        return best_corner;
-    }
-
-    // If we didn't found a corner here, this means that they are all covered
-    //  -> now get the closest (covered) corner
-
-    // Reset the min distance
-    min_dist = INFINITY;
-
-    // Search for a corner which is not covered
-    foreach(Corner *c, m_corners_list) {
-        // Get the corner position relative to the simulation area
-        QPoint c_pos = QPointF(c->getRealPos() - m_real_sim_rect.topLeft()).toPoint();
-        double dist = QLineF(c_pos, pos).length();
-
-        // Keep the closest corner
-        if (dist < min_dist && !m_excluded_corners.contains(c)) {
-            min_dist = dist;
-            best_corner = c;
-        }
-    }
-
-    // Here we should have found a corner
-    return best_corner;
+    return cost;
 }
 
 QPointF CoverageOptimizer::getPlaceableCornerPosition(Corner *c) {
@@ -323,4 +375,25 @@ QPointF CoverageOptimizer::getPlaceableCornerPosition(Corner *c) {
     pos -= CORNER_OFFSET_DIST * QPointF(unit_v1.dx() + unit_v2.dx(), unit_v1.dy() + unit_v2.dy());
 
     return pos;
+}
+
+
+QList<Emitter*> CoverageOptimizer::getPlacedEmitters() {
+    return m_placed_emitters;
+}
+
+int CoverageOptimizer::getNumPlacedEmitters() {
+    return m_placed_emitters.size();
+}
+
+double CoverageOptimizer::getTotalCoverage() {
+    return totalCoverageRatio(0);
+}
+
+double CoverageOptimizer::getTotalCoverageMargin() {
+    return totalCoverageRatio(m_fade_margin);
+}
+
+double CoverageOptimizer::getTimeElapsed() {
+    return m_elapsed_time;
 }

@@ -3,10 +3,12 @@
 
 #include <QGraphicsItem>
 #include <QMutex>
+#include <QSet>
 
 #include "simulationitem.h"
 #include "raypath.h"
 #include "antennas.h"
+#include "emitter.h"
 
 namespace ResultType {
 enum ResultType {
@@ -63,7 +65,7 @@ public:
     double delaySpread();
     double riceFactor();
 
-    bool isCovered();
+    bool isCovered(double coverage_margin);
 
     void showResults(ResultType::ResultType type, double min, double max);
 
@@ -75,6 +77,7 @@ private:
     Antenna *m_antenna;
 
     QList<RayPath*> m_received_rays;
+    QSet<Emitter*> m_attached_emitters;
 
     double m_received_power;
     double m_user_end_SNR;

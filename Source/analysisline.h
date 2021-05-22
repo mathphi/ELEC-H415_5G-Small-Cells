@@ -19,6 +19,8 @@ public:
     void createReceivers(AntennaType::AntennaType ant_type);
     QList<Receiver*> getReceiversList();
 
+    bool ignoreInBound() { return true; }
+
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) override;

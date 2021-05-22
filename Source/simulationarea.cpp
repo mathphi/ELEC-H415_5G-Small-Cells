@@ -41,6 +41,10 @@ void SimulationArea::getReceivedDataBounds(ResultType::ResultType type, double *
     *max = -qInf();
 
     foreach(Receiver *r, m_receivers_map) {
+        // Skip out-of-model receivers
+        if (r->outOfModel())
+            continue;
+
         switch (type) {
         case ResultType::Power:
             val = r->receivedPower();
@@ -104,6 +108,9 @@ void SimulationArea::setArea(AntennaType::AntennaType type, QRectF area) {
     setBrush(QBrush(qRgba(225, 225, 255, 255), Qt::DiagCrossPattern));
     QGraphicsRectItem::setRect(fit_area);
 
+    // Remove the placed emitters (if one)
+    deletePlacedEmitters();
+
     // Delete and recreate the receivers list
     deleteReceivers();
     createReceivers(type, fit_area);
@@ -120,11 +127,23 @@ QRectF SimulationArea::getRealArea() {
             );
 }
 
+QList<Emitter*> SimulationArea::getPlacedEmitters() {
+    return m_placed_emitters;
+}
+
 void SimulationArea::addPlacedEmitter(Emitter *e) {
     m_placed_emitters.append(e);
 
     if (simulationScene()) {
         simulationScene()->addItem(e);
+    }
+}
+
+void SimulationArea::removePlacedEmitter(Emitter *e) {
+    m_placed_emitters.removeAll(e);
+
+    if (simulationScene()) {
+        simulationScene()->removeItem(e);
     }
 }
 

@@ -14,6 +14,8 @@ public:
     bool placingMode() const;
     void setPlacingMode(bool on);
 
+    bool ignoreInBound() { return false; }
+
     QPointF getRealPos();
 
     SimulationScene *simulationScene() const;

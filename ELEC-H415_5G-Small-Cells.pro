@@ -24,6 +24,7 @@ SOURCES += \
     Source/impulsedialog.cpp \
     Source/main.cpp \
     Source/mainwindow.cpp \
+    Source/optimizerdialog.cpp \
     Source/raypath.cpp \
     Source/receiver.cpp \
     Source/receiverdialog.cpp \
@@ -51,6 +52,7 @@ HEADERS += \
     Source/emitterdialog.h \
     Source/impulsedialog.h \
     Source/mainwindow.h \
+    Source/optimizerdialog.h \
     Source/raypath.h \
     Source/receiver.h \
     Source/receiverdialog.h \
@@ -69,6 +71,7 @@ FORMS += \
     Source/emitterdialog.ui \
     Source/impulsedialog.ui \
     Source/mainwindow.ui \
+    Source/optimizerdialog.ui \
     Source/receiverdialog.ui \
     Source/simsetupdialog.ui
 

@@ -12,6 +12,7 @@
 #include "analysisdialog.h"
 #include "impulsedialog.h"
 #include "coverageoptimizer.h"
+#include "optimizerdialog.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -763,7 +764,7 @@ void MainWindow::graphicsSceneLeftReleased(QGraphicsSceneMouseEvent *event) {
         // Remove each items from the graphics scene and delete it
         foreach (QGraphicsItem *item, trash) {
             // Don't remove other items (ie: mouse tracker lines or
-            // eraser rectancgle) than the type SimulationItem
+            // eraser rectangle) than the type SimulationItem
             if (!(dynamic_cast<SimulationItem*>(item))) {
                 continue;
             }
@@ -1251,13 +1252,13 @@ void MainWindow::updateSimulationUI() {
     // Set the current simulation type
     ui->combobox_simType->setCurrentIndex(sim_type);
 
-    // Show/hide the progress bar
+    // Show/Hide simulation progress bar
     ui->progressbar_simulation->setVisible(m_simulation_handler->isRunning());
 
     // Show/hide widget groups
     ui->group_show_rays->setVisible(sim_type == SimType::PointReceiver);
-    ui->group_result_type->setVisible(sim_type == SimType::AreaReceiver);
-    ui->group_antenna_type->setVisible(sim_type == SimType::AreaReceiver || sim_type == SimType::Analysis1D);
+    ui->group_result_type->setVisible(sim_type == SimType::AreaReceiver || sim_type == SimType::CoverageOptim);
+    ui->group_antenna_type->setVisible(sim_type == SimType::AreaReceiver || sim_type == SimType::Analysis1D || sim_type == SimType::CoverageOptim);
     ui->button_analysisLine->setVisible(sim_type == SimType::Analysis1D);
 
     // Widgets enabling/disabling
@@ -1274,6 +1275,7 @@ void MainWindow::updateSimulationUI() {
     ui->actionSimulation_setup->setDisabled(m_simulation_handler->isRunning());
     ui->button_simSetup->setDisabled(m_simulation_handler->isRunning());
     ui->button_analysisLine->setDisabled(m_simulation_handler->isRunning());
+    ui->group_result_type->setDisabled(m_simulation_handler->isRunning());
 
     // Change the control button text
     ui->button_simControl->setEnabled(!m_simulation_handler->isCancelling());
@@ -1293,6 +1295,9 @@ void MainWindow::updateSimulationUI() {
 }
 
 void MainWindow::updateSimulationScene() {
+    // Get the simulation type
+    SimType::SimType sim_type = m_simulation_handler->simulationData()->simulationType();
+
     // Hide receivers only if simulation mode and AreaReceiver simulation type
     if (m_ui_mode == UIMode::EditorMode) {
         setPointReceiversVisible(true);
@@ -1300,11 +1305,12 @@ void MainWindow::updateSimulationScene() {
         deleteAnalysisLine();
     }
     else {
-        switch (m_simulation_handler->simulationData()->simulationType()) {
+        switch (sim_type) {
         case SimType::PointReceiver: {
-            setPointReceiversVisible(true);
             deleteSimArea();
             deleteAnalysisLine();
+            setPointReceiversVisible(true);
+            setPointEmittersVisible(true);
             break;
         }
         case SimType::CoverageOptim:
@@ -1313,9 +1319,10 @@ void MainWindow::updateSimulationScene() {
             QCursor cur = cursor();
             setCursor(Qt::WaitCursor);
 
+            setPointEmittersVisible(sim_type == SimType::AreaReceiver);
             setPointReceiversVisible(false);
-            createSimArea();
             deleteAnalysisLine();
+            createSimArea();
 
             // Recover the original cursor
             setCursor(cur);
@@ -1323,6 +1330,7 @@ void MainWindow::updateSimulationScene() {
         }
         case SimType::Analysis1D: {
             setPointReceiversVisible(false);
+            setPointEmittersVisible(true);
             deleteSimArea();
             break;
         }
@@ -1333,6 +1341,11 @@ void MainWindow::updateSimulationScene() {
 void MainWindow::updateResultTypeRadios() {
     // Disable some result type under certain conditions
     int em_count = m_simulation_handler->simulationData()->getEmittersList().size();
+
+    // If there are placed emitters in the simulation area item -> use this number of emitters
+    if (m_sim_area_item && !m_sim_area_item->getPlacedEmitters().isEmpty()) {
+        em_count = m_sim_area_item->getPlacedEmitters().size();
+    }
 
     // If there are more than one emitter -> no Delay Spread nor Rice Factor
     if (em_count > 1) {
@@ -1361,16 +1374,25 @@ void MainWindow::setPointReceiversVisible(bool visible) {
     }
 }
 
+void MainWindow::setPointEmittersVisible(bool visible) {
+    foreach(Emitter *e, m_simulation_handler->simulationData()->getEmittersList()) {
+        e->setVisible(visible);
+    }
+}
+
 void MainWindow::createSimArea() {
+    // If the simulation item already exists, delete it before re-constructing it
+    if (m_sim_area_item) {
+        delete m_sim_area_item;
+    }
+
+    // Create the area rectangle
+    m_sim_area_item = new SimulationArea();
+    m_scene->addItem((SimulationItem*) m_sim_area_item);
+
     // Get the simulation bounding rect and selected antenna type
     QRectF area = m_scene->simulationBoundingRect();
     AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
-
-    if (m_sim_area_item == nullptr) {
-        // Create the area rectangle
-        m_sim_area_item = new SimulationArea();
-        m_scene->addItem((SimulationItem*) m_sim_area_item);
-    }
 
     // Re-draw the simulation area
     // Set the area after the item is added to the scene!
@@ -1553,10 +1575,57 @@ void MainWindow::simulationControlAction() {
                 return;
             }
 
-            CoverageOptimizer optimizer(m_sim_area_item, 27*1e9, 2.0, AntennaType::HalfWaveDipoleVert);
-            optimizer.optimizeEmitters();
+            // Create and exec the optimizer dialog
+            OptimizerDialog optim_dialog(this);
+            int ans = optim_dialog.exec();
 
+            // Cancel if the dialog was not accepted
+            if (ans != QDialog::Accepted)
+                return;
+
+            // Initialize the coverage optimizer
+            CoverageOptimizer optimizer(m_simulation_handler, m_sim_area_item);
+
+            // Show the heat map with an initial range (just to avoid a range of [NaN;NaN]).
+            // Its content will be updated by the optimizer.
             showResultHeatMap();
+
+            // Start the optimization process with parameters given in optimizer dialog
+            bool optim_done = optimizer.optimizeEmitters(
+                        optim_dialog.getCoverThreshold(),
+                        optim_dialog.getCoverMargin(),
+                        optim_dialog.getFrequency(),
+                        optim_dialog.getEIRP(),
+                        optim_dialog.getEfficiency(),
+                        optim_dialog.getAntennaType());
+
+            if (optim_done) {
+                // Show the results
+                showResultHeatMap();
+
+                // Show a summary of the optimization process
+                QString optim_summary =
+                        "<h1>Optimization finished</h1>"
+                        "<p><b>Placed emitters:</b> %3</p>"
+                        "<p><b>Total map coverage:</b> %4&nbsp;\%</p>"
+                        "<p><b>Coverage with margin:</b> %5&nbsp;\%</p>"
+                        "<p><b>Optimization duration:</b> %1&nbsp;%2</p>";
+
+                // Convert the delay to human readable
+                QString units;
+                double duration = SimulationData::delayToHumanReadable(optimizer.getTimeElapsed(), &units);
+
+                optim_summary = optim_summary.arg(duration, 0, 'f', 2).arg(units);
+                optim_summary = optim_summary.arg(optimizer.getNumPlacedEmitters());
+                optim_summary = optim_summary.arg(optimizer.getTotalCoverage()*100, 0, 'f', 2);
+                optim_summary = optim_summary.arg(optimizer.getTotalCoverageMargin()*100, 0, 'f', 2);
+
+                // Show in a message box
+                QMessageBox::information(
+                            this,
+                            "Optimization finished",
+                            optim_summary);
+            }
             break;
         }
         }
@@ -1650,6 +1719,9 @@ void MainWindow::resultTypeSelectionChanged(int, bool checked) {
 void MainWindow::simulationStarted() {
     // Update the UI controls
     updateSimulationUI();
+
+    // Show the progress bar
+    ui->progressbar_simulation->setVisible(true);
 }
 
 void MainWindow::simulationFinished() {
@@ -1689,6 +1761,10 @@ void MainWindow::simulationProgress(double p) {
 void MainWindow::simulationReset() {
     m_simulation_handler->resetComputedData();
     m_scene->hideDataLegend();
+
+    if (m_sim_area_item) {
+        m_sim_area_item->deletePlacedEmitters();
+    }
 }
 
 bool MainWindow::askSimulationReset() {
@@ -1775,8 +1851,35 @@ void MainWindow::showResultHeatMap() {
     // Get the currently selected type
     ResultType::ResultType res_type = (ResultType::ResultType) m_result_radio_grp->checkedId();
 
+    // Get the max/min from current data
     double min, max;
     m_sim_area_item->getReceivedDataBounds(res_type, &min, &max);
+
+    // Add default values if no bounds are availables
+    if (isinf(min) || isinf(max)) {
+        switch (res_type) {
+        case ResultType::Power: {
+            min = SimulationData::convertPowerToWatts(-150);
+            max = SimulationData::convertPowerToWatts(0);
+            break;
+        }
+        case ResultType::CoverageMap:
+        case ResultType::SNR: {
+            min = -50;
+            max = 50;
+            break;
+        }
+        case ResultType::DelaySpread: {
+            min = 0;
+            max = 1e-6;
+            break;
+        }
+        case ResultType::RiceFactor: {
+            min = -10;
+            max = 10;
+        }
+        }
+    }
 
     // Loop over every receiver and show its results
     foreach(Receiver *re , m_sim_area_item->getReceiversList())

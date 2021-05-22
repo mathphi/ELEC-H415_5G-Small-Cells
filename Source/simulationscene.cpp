@@ -43,6 +43,10 @@ QRectF SimulationScene::simulationBoundingRect() const {
         SimulationItem *s_i = dynamic_cast<SimulationItem*>(item);
 
         if (s_i) {
+            // Ignore this item if not needed in bounds
+            if (s_i->ignoreInBound())
+                continue;
+
             Emitter *e_i = dynamic_cast<Emitter*>(s_i);
             Receiver *r_i = dynamic_cast<Receiver*>(s_i);
 

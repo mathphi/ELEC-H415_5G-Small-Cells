@@ -124,6 +124,7 @@ private:
     void updateSimulationScene();
     void updateResultTypeRadios();
     void setPointReceiversVisible(bool visible);
+    void setPointEmittersVisible(bool visible);
     void createSimArea();
     void deleteSimArea();
     void deleteAnalysisLine();

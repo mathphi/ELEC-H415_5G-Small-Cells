@@ -28,16 +28,21 @@ public:
     QRectF getArea();
     QRectF getRealArea();
 
+    QList<Emitter*> getPlacedEmitters();
     void addPlacedEmitter(Emitter *e);
+    void removePlacedEmitter(Emitter *e);
+
+    bool ignoreInBound() { return true; }
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
     void paint(QPainter *p, const QStyleOptionGraphicsItem *s, QWidget *w) override;
 
+    void deletePlacedEmitters();
+
 private:
     void createReceivers(AntennaType::AntennaType type, QRectF area);
     void deleteReceivers();
-    void deletePlacedEmitters();
 
     QMap<QPoint,Receiver*> m_receivers_map;
     QRectF m_area;
