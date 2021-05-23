@@ -358,7 +358,9 @@ double CoverageOptimizer::getPositionScore(QPointF pos) {
         dist = direct_line.length();
 
         // Add this receiver to the score
-        score += ampl_factor / (1 + dist);
+        // The score function is based on a inverse sigmoid in order to give more importance to
+        // the uncovered receivers which are close to the position.
+        score += ampl_factor * (1 - 1 / (1 + exp(-0.1 * (dist - 150))));
     }
 
     return score;

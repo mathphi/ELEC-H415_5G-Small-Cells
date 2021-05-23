@@ -1397,9 +1397,15 @@ void MainWindow::createSimArea() {
     QRectF area = m_scene->simulationBoundingRect();
     AntennaType::AntennaType type = (AntennaType::AntennaType) ui->combobox_antennas_type->currentData().toInt();
 
+    // Disable the start button, since the next operation may take a while
+    ui->button_simControl->setDisabled(true);
+
     // Re-draw the simulation area
     // Set the area after the item is added to the scene!
     m_sim_area_item->setArea(type, area);
+
+    // Re-enable the start button
+    ui->button_simControl->setDisabled(false);
 }
 
 void MainWindow::deleteSimArea() {
