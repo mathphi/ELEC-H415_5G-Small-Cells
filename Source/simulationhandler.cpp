@@ -119,7 +119,7 @@ QPointF SimulationHandler::mirror(const QPointF source, Wall *wall) {
 
 
 /**
- * @brief SimulationHandler::computeTransmissons
+ * @brief SimulationHandler::checkIntersections
  *
  * This function checks if the ray intersects a wall
  *
@@ -154,7 +154,7 @@ bool SimulationHandler::checkIntersections(
 }
 
 /**
- * @brief SimulationHandler::computeReflection
+ * @brief SimulationHandler::reflectionCoefficient
  *
  * This function computes the reflection coefficient for the reflection of
  * an incident ray on a wall.
@@ -167,7 +167,7 @@ bool SimulationHandler::checkIntersections(
  * @param ray_in : The incident ray
  * @return       : The reflection coefficient for this reflection
  */
-vector<complex> SimulationHandler::computeReflection(Wall *w, QLineF in_ray) {
+vector<complex> SimulationHandler::reflectionCoefficient(Wall *w, QLineF in_ray) {
     // Get the properties of the simulation
     const double e_r = simulationData()->getRelPermitivity();
 
@@ -318,7 +318,7 @@ RayPath *SimulationHandler::computeRayPath(
 
         // Compute the reflection coefficient for this reflection
         // The multiplication is made component by component (not a cross product).
-        coeff *= computeReflection(reflect_wall, ray);
+        coeff *= reflectionCoefficient(reflect_wall, ray);
 
         // Add this ray line to the list of lines forming the ray path
         rays.append(ray);
@@ -503,7 +503,7 @@ void SimulationHandler::computeDiffractedRay(Emitter *e, Receiver *r, Corner *c)
     // Coefficients vector
     vector<complex> coeff = {1, 1, 1};
 
-    // Prune negative Delta_r (numerical instabilities) -> treated as a LOS ray
+    // Negative Delta_r = numerical instabilities when (s1+s2) = d_los -> treated as a LOS ray
     if (Delta_r > 0) {
         // Fresnel parameter (equation 3.57)
         double nu = sqrt(2/M_PI * beta * Delta_r);

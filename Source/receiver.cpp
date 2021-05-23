@@ -201,9 +201,16 @@ QList<RayPath*> Receiver::getRayPaths() {
 }
 
 void Receiver::discardEmitter(Emitter *e) {
+    // Lock the mutex to ensure that only one thread can access the list at a time
+    m_mutex.lock();
+
     // Ignore if no rays come from this emitter
-    if (!m_attached_emitters.contains(e))
+    if (!m_attached_emitters.contains(e)) {
+        // Unlock the mutex to allow others threads to access
+        m_mutex.unlock();
+
         return;
+    }
 
     // For every raypath
     foreach(RayPath *rp, m_received_rays) {
@@ -226,11 +233,23 @@ void Receiver::discardEmitter(Emitter *e) {
     m_user_end_SNR   = NAN;
     m_delay_spread   = NAN;
     m_rice_factor    = NAN;
+
+    // Unlock the mutex to allow others threads to access
+    m_mutex.unlock();
 }
 
 void Receiver::setOutOfModel(bool out, Emitter *e) {
     m_out_of_model = out;
     m_oom_emitter = e;
+
+    // Lock the mutex to ensure that only one thread can access the list at a time
+    m_mutex.lock();
+
+    // Insert the source emitter (if not present yet)
+    m_attached_emitters.insert(e);
+
+    // Unlock the mutex to allow others threads to access
+    m_mutex.unlock();
 }
 
 bool Receiver::outOfModel() {
@@ -248,31 +267,37 @@ double Receiver::receivedPower() {
     if (!isnan(m_received_power))
         return m_received_power;
 
+    // Lock the mutex to ensure that only one thread can access the list at a time
+    m_mutex.lock();
+
     // Implementation of equation 3.51
     complex sum = 0;
 
     // For each received rays
     foreach (RayPath *rp, m_received_rays) {
         // Incidence angle of the ray to the receiver (first ray in the list)
-        double phi = getIncidentRayAngle(rp->getRays().at(0));
+        const double phi = getIncidentRayAngle(rp->getRays().at(0));
 
         // Get the frequency from the emitter
-        double frequency = rp->getEmitter()->getFrequency();
+        const double frequency = rp->getEmitter()->getFrequency();
 
         // Get the antenna's resistance and effective height
-        vector<complex> he = getEffectiveHeight(rp->getVerticalAngle(), phi, frequency);
+        const vector<complex> he = getEffectiveHeight(rp->getVerticalAngle(), phi, frequency);
 
         // Get the electric field of the incoming ray
-        vector<complex> En = rp->getElectricField();
+        const vector<complex> En = rp->getElectricField();
 
         // Sum inside the square modulus
         sum += dotProduct(he, En);
     }
 
-    double Ra = getResistance();
+    const double Ra = getResistance();
 
     // norm() = square of modulus
     m_received_power =  norm(sum) / (8.0 * Ra);
+
+    // Unlock the mutex to allow others threads to access
+    m_mutex.unlock();
 
     return m_received_power;
 }
@@ -311,15 +336,23 @@ double Receiver::userEndSNR() {
  * The delay spread is defined if there is only one emitter in the simulation.
  */
 double Receiver::delaySpread() {
+    // Re-use the previously computed value
+    if (!isnan(m_delay_spread)) {
+        return m_delay_spread;
+    }
+
+    // Lock the mutex to ensure that only one thread can access the list at a time
+    m_mutex.lock();
+
     // No delay spread if more than one emitter or if less than two rays
     if (m_attached_emitters.size() != 1 ||
             m_received_rays.size() < 2) {
+
+        // Unlock the mutex to allow others threads to access
+        m_mutex.unlock();
+
         return NAN;
     }
-
-    // Re-use the previously computed value
-    if (!isnan(m_delay_spread))
-        return m_delay_spread;
 
     double delay_i, delay_j;
     double max_delay = 0;
@@ -339,6 +372,9 @@ double Receiver::delaySpread() {
     // Store the computed delay spread for future usage
     m_delay_spread = max_delay;
 
+    // Unlock the mutex to allow others threads to access
+    m_mutex.unlock();
+
     return m_delay_spread;
 }
 
@@ -350,15 +386,23 @@ double Receiver::delaySpread() {
  * The rice factor is defined if there is only one emitter in the simulation.
  */
 double Receiver::riceFactor() {
+    // Re-use the previously computed value
+    if (!isnan(m_rice_factor)) {
+        return m_rice_factor;
+    }
+
+    // Lock the mutex to ensure that only one thread can access the list at a time
+    m_mutex.lock();
+
     // No rice factor if more than one emitter or if less than two rays
     if (m_attached_emitters.size() != 1 ||
             m_received_rays.size() < 2) {
+
+        // Unlock the mutex to allow others threads to access
+        m_mutex.unlock();
+
         return NAN;
     }
-
-    // Re-use the previously computed value
-    if (!isnan(m_rice_factor))
-        return m_rice_factor;
 
     // Initialize to 0
     double los_val_sq = 0;
@@ -376,6 +420,9 @@ double Receiver::riceFactor() {
 
     // Rice factor in dB
     m_rice_factor = 10*log10(los_val_sq/sum_ampl_sq);
+
+    // Unlock the mutex to allow others threads to access
+    m_mutex.unlock();
 
     return m_rice_factor;
 }

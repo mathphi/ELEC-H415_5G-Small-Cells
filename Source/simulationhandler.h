@@ -30,7 +30,7 @@ public:
     static QPointF mirror(const QPointF source, Wall *wall);
 
     bool checkIntersections(QLineF ray, Wall *origin_wall, Wall *target_wall);
-    vector<complex> computeReflection(Wall *w, QLineF in_ray);
+    vector<complex> reflectionCoefficient(Wall *w, QLineF in_ray);
 
     vector<complex> computeNominalElecField(
             Emitter *em,
