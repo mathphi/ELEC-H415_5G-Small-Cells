@@ -633,15 +633,18 @@ void MainWindow::graphicsSceneDoubleClicked(QGraphicsSceneMouseEvent *event) {
     }
     // Else, if we are in simulation mode
     else {
-        // Loop over the items under the mouse position
-        foreach(QGraphicsItem *item, m_scene->items(event->scenePos())) {
-            // Try to cast this item
-            Receiver *re = dynamic_cast<Receiver*>(item);
+        // Show impulse window only if no computation is running
+        if (!m_simulation_handler->isRunning()) {
+            // Loop over the items under the mouse position
+            foreach(QGraphicsItem *item, m_scene->items(event->scenePos())) {
+                // Try to cast this item
+                Receiver *re = dynamic_cast<Receiver*>(item);
 
-            // If one of them is an Receiver -> show impulse responses
-            if (re != nullptr) {
-                showImpulseResponses(re);
-                break;
+                // If one of them is an Receiver -> show impulse responses
+                if (re != nullptr) {
+                    showImpulseResponses(re);
+                    break;
+                }
             }
         }
     }
