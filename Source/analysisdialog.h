@@ -28,7 +28,7 @@ private slots:
 
 private:
     QtCharts::QLogValueAxis *createDistanceAxis();
-    QtCharts::QValueAxis *createValueAxis(QString axis_name);
+    QtCharts::QValueAxis *createValueAxis(QString axis_name, QString fmt = "%.1f");
     void preparePlotsData();
     void exportPlotImage(QString file_path);
     void exportPlotData(QString file_path);

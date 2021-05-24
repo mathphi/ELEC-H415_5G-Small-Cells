@@ -71,10 +71,10 @@ QLogValueAxis *AnalysisDialog::createDistanceAxis() {
     return axis;
 }
 
-QValueAxis *AnalysisDialog::createValueAxis(QString axis_name) {
+QValueAxis *AnalysisDialog::createValueAxis(QString axis_name, QString fmt) {
     QValueAxis *axis = new QValueAxis();
     axis->setTitleText(axis_name);
-    axis->setLabelFormat("%.1f");
+    axis->setLabelFormat(fmt);
     axis->setTickCount(-1);
 
     return axis;
@@ -86,6 +86,24 @@ void AnalysisDialog::preparePlotsData() {
     QLineSeries *snr_series     = new QLineSeries();
     QLineSeries *delay_series   = new QLineSeries();
     QLineSeries *rice_series    = new QLineSeries();
+
+    // Get the maximal delay spread
+    double tmp_delay, max_delay_val = 0;
+
+    // Look for the max delay spread
+    foreach (Receiver *r, m_receivers_list) {
+        // Get the delay spread for this receiver
+        tmp_delay = r->delaySpread();
+
+        if (!isnan(tmp_delay) && !isinf(tmp_delay) && tmp_delay > max_delay_val) {
+            max_delay_val = tmp_delay;
+        }
+    }
+
+    // Get the delay units and scale
+    QString delay_units;
+    double delay_scale;
+    SimulationData::delayToHumanReadable(max_delay_val, &delay_units, &delay_scale);
 
     // Temporary variables for the loop
     double d;
@@ -101,7 +119,7 @@ void AnalysisDialog::preparePlotsData() {
         // Get and parse the corresponding values
         power_val   = SimulationData::convertPowerTodBm(r->receivedPower());
         snr_val     = r->userEndSNR();
-        delay_val   = r->delaySpread();
+        delay_val   = r->delaySpread() / delay_scale;
         rice_val    = r->riceFactor();
 
         if (!isnan(power_val) && !isinf(power_val)) {
@@ -163,7 +181,7 @@ void AnalysisDialog::preparePlotsData() {
 
     QValueAxis *power_axisY = createValueAxis("Received power [dBm]");
     QValueAxis *snr_axisY   = createValueAxis("SNE at UE [dB]");
-    QValueAxis *delay_axisY = createValueAxis("Delay spread [s]");
+    QValueAxis *delay_axisY = createValueAxis("Delay spread [" + delay_units + "]");
     QValueAxis *rice_axisY  = createValueAxis("Rice factor [dB]");
 
     m_power_plot->addAxis(power_axisY,  Qt::AlignLeft);
