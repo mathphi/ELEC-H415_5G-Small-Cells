@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>5G small cells - Simulation</string>
+   <string>5G Small Cells - Simulation</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../Resources/resources.qrc">
@@ -667,7 +667,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>22</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

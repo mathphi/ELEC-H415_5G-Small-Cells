@@ -76,6 +76,7 @@ FORMS += \
     Source/simsetupdialog.ui
 
 DISTFILES += \
+    5G Small Cells - Simulation - Capture.jpg \
     README.md
 
 RESOURCES += \

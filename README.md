@@ -1,5 +1,7 @@
-# Channel modeling for 5G small cells
-#### ELEC-H415 Communication channels
+# Channel Modeling for 5G Small Cells
+#### ELEC-H415 - Communication channels
+
+![5G Small Cells - Capture](5G Small Cells - Simulation - Capture.jpg "5G Small Cells - Capture")
 
 ### Objectives
 5G small cells will be soon deployed to provide very high data rates, at street level. They will complement the usual urban cells whose base stations are located on rooftops, typically. Small cell base stations (BS) will be installed on urban furniture, at height comparable to user equipment (UE). They will communicate at frequencies around 27GHz (in Europe), with very large bandwidths, up to 200MHz in Belgium. The goal of this project is to numerically model small cell channels, by using ray-tracing to simulate propagation.
@@ -57,21 +59,3 @@ It is easy to go beyond these minimal requirements, and you are invited to be cr
 We propose you to address the following challenge: design a BS deployment in the area between Rue de la Loi/Wetstraat and Rue Belliard/Belliardstraat, as shown on the map below. The number of BSs should be as small as possible while ensuring the highest probability of connection.
 
 Other improvements can be easily found, as taking beamforming into account.
-
-### Report and defense
-
-Your report must contain 3 items:
-- The theoretical foundations you used to develop your software. Specifically, you have to include, at least, the theoretical derivations of the induced voltage for
-	1. LOS wave
-	2. Single reflection off a building
-	3. Ground reflected wave
-	4. Diffracted wave
-- Validation of your calculation by showing Rue de la Loi/Wetstraat results.
-- Analyses and physical interpretations of results.
-
-Addressing the challenge is not mandatory, but the only way to reach the highest marks, beyond 16/20. Please carefully explain how you addressed the challenge. A winner group will be potentially selected depending on deployment quality and report clarity. It will be granted a maximal mark of 20/20 for this course.
-
-**The report (PDF file) has to be sent (pdedonck@ulb.ac.be) by Monday May 31.**
-
-Your oral defense will make a synthesis of all these points, with emphasis on results and analyses. Questions during presentation will concern the content of the report, oral presentation and exercises.
-
