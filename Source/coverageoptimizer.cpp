@@ -314,11 +314,11 @@ Receiver *CoverageOptimizer::getReceiverAt(QPoint pos) {
 }
 
 /**
- * @brief CoverageOptimizer::getCornerScore
+ * @brief CoverageOptimizer::getPositionScore
  * @param c
  * @return
  *
- * This function computes the score for the given corner
+ * This function computes the score for the given position
  */
 double CoverageOptimizer::getPositionScore(QPointF pos) {
     // Init score to zero
@@ -366,6 +366,14 @@ double CoverageOptimizer::getPositionScore(QPointF pos) {
     return score;
 }
 
+/**
+ * @brief CoverageOptimizer::getPlaceableCornerPosition
+ * @param c
+ * @return
+ *
+ * This function returns the "placeable" corner position.
+ * It consists of a position at some distance from the given corner, outside the building.
+ */
 QPointF CoverageOptimizer::getPlaceableCornerPosition(Corner *c) {
     // Get the unit vectors of the two walls (length = 1m, direction = inside the building)
     QLineF unit_v1 = c->getAdjecentRealLines().at(0).unitVector();
