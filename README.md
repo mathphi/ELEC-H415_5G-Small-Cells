@@ -1,7 +1,7 @@
 # Channel Modeling for 5G Small Cells
 #### ELEC-H415 - Communication channels
 
-![5G Small Cells - Capture](5G Small Cells - Simulation - Capture.jpg "5G Small Cells - Capture")
+![5G Small Cells - Capture](5G%20Small%20Cells%20-%20Simulation%20-%20Capture.jpg "5G Small Cells - Capture")
 
 ### Objectives
 5G small cells will be soon deployed to provide very high data rates, at street level. They will complement the usual urban cells whose base stations are located on rooftops, typically. Small cell base stations (BS) will be installed on urban furniture, at height comparable to user equipment (UE). They will communicate at frequencies around 27GHz (in Europe), with very large bandwidths, up to 200MHz in Belgium. The goal of this project is to numerically model small cell channels, by using ray-tracing to simulate propagation.
